@@ -23,23 +23,18 @@ func main() {
 	// 00008100: 74fc ffff c605 1945 0000 01c6 050e 4500
 
 	for _, sig := range signatures {
-		fmt.Printf("Checking for signature: %s\n", sig.Name)
 		f, err := os.Open(os.Args[1])
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error opening file: %s\n", err)
 			os.Exit(1)
 		}
 
-		offsets, err := sig.CheckMatch(f)
+		matches, err := sig.CheckMatch(f)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error checking signature: %s\n", err)
 			os.Exit(1)
 		}
 
-		if len(offsets) > 0 {
-			fmt.Printf("Found signature at offsets: %v\n", offsets)
-		} else {
-			fmt.Printf("Signature not found\n")
-		}
+		matches.Write(os.Stdout, os.Args[1])
 	}
 }

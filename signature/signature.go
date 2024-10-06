@@ -1,34 +1,34 @@
 package signature
 
-import (
-	"io"
-)
+import "io"
 
 const (
-	NoMask     = 0xff
-	IgnoreMask = 0x00
+	MatchByte = 0xff
+	AnyByte   = 0x00
 )
 
+// buffSize is the size of the buffer used to read the file.
+// It's a multiple of the OS page size.
+// The typical page size is 4096 bytes.
+var buffSize int
+
 type Signature struct {
-	Name        string
-	Description string
-	Pattern     []byte
-	Mask        []byte
+	Name          string
+	Description   string
+	pattern       []byte
+	mask          []byte
+	maskedPattern []byte
 }
 
 // Make creates a new Signature with the given name, description, and pattern.
+// The mask is set to MatchByte for all bytes in the pattern.
 func Make(name, description string, pattern []byte) *Signature {
 	mask := make([]byte, len(pattern))
 	for i := range mask {
-		mask[i] = NoMask
+		mask[i] = MatchByte
 	}
 
-	return &Signature{
-		Name:        name,
-		Description: description,
-		Pattern:     pattern,
-		Mask:        mask,
-	}
+	return MakeWithMask(name, description, pattern, mask)
 }
 
 // MakeWithMask creates a new Signature with the given name, description,
@@ -38,117 +38,91 @@ func MakeWithMask(name, description string, pattern, mask []byte) *Signature {
 		panic("pattern and mask length mismatch")
 	}
 
+	maskedPattern := make([]byte, len(pattern))
+	for i := range pattern {
+		maskedPattern[i] = pattern[i] & mask[i]
+	}
+
 	return &Signature{
-		Name:        name,
-		Description: description,
-		Pattern:     pattern,
-		Mask:        mask,
+		Name:          name,
+		Description:   description,
+		pattern:       pattern,
+		mask:          mask,
+		maskedPattern: maskedPattern,
 	}
 }
 
-func (s *Signature) patternLen() int {
-	return len(s.Pattern)
+// length returns the length of the pattern and mask.
+func (s *Signature) length() int {
+	return len(s.pattern)
 }
 
-func (s *Signature) CheckMatch(r io.Reader) ([]int, error) {
+// CheckMatch reads the file from the reader and checks if the signature matches.
+//
+// This function is designed to minimize the number of read syscalls by reading
+// the file in chunks of "buffSize" bytes.
+func (s *Signature) CheckMatch(r io.Reader) (*SigMatches, error) {
 	var (
-		offset  = 0
-		offsets []int
-		ok      bool
-		stride  int
-		buffer  = NewRingBuffer(s.patternLen())
+		offset   = 0
+		offsets  []int
+		buffer   = NewRingBuffer(buffSize)
+		maxBytes = buffSize - s.length()
+
+		fileByte byte
 	)
 
-	n, err := buffer.Read(r, s.patternLen())
+	if maxBytes < 0 {
+		maxBytes = buffSize
+	}
+
+	// Read the entire buffer the first time.
+	n, err := buffer.Read(r, buffSize)
 	if err != nil {
 		return nil, err
 	}
-	if n < s.patternLen() {
-		// No enough bytes to match, return no offsets.
-		return []int{}, nil
-	}
 
-	if ok, stride = s.checkMatch(buffer); ok {
-		offsets = append(offsets, offset)
-	}
+	for n > 0 {
+		for i := 0; i < n; i++ {
+			// If there isn't enough bytes to match the pattern, break.
+			if i+s.length() >= buffer.Size() {
+				break
+			}
 
-	offset += stride
+			// If the byte at i doesn't match the first byte of the pattern, continue.
+			fileByte = buffer.Get(i) & s.mask[0]
+			if fileByte != s.maskedPattern[0] {
+				continue
+			}
 
-	// Read the rest of the file, "stride" bytes at a time.
-	for {
-		n, err := buffer.Read(r, stride)
+			// Check if the rest of the pattern matches.
+			for j := 1; j < s.length(); j++ {
+				fileByte = buffer.Get(i+j) & s.mask[j]
+
+				if s.maskedPattern[j] != fileByte {
+					break
+				}
+
+				// If the last iteration of the loop is reached, the pattern matches.
+				if j == s.length()-1 {
+					offsets = append(offsets, i+offset)
+				}
+			}
+		}
+
+		offset += maxBytes
+
+		// Read the next chunk of the file.
+		// We read less bytes than the buffer size to account for possible matches
+		// that span the buffer boundary.
+		n, err = buffer.Read(r, maxBytes)
+
 		if err == io.EOF {
+			// TODO check if this is necessary
 			break
 		} else if err != nil {
 			return nil, err
 		}
-
-		if n == 0 {
-			break
-		}
-
-		if ok, stride = s.checkMatch(buffer); ok {
-			offsets = append(offsets, offset)
-		}
-		offset += stride
 	}
 
-	return offsets, nil
-}
-
-// checkMatch checks that the passed bytes match the pattern and mask
-// of the signature, expecting the bytes to be the same length as the
-// pattern and mask.
-//
-// It returns true if the bytes match the pattern and mask, and false otherwise.
-// It also returns the stride: the number of bytes to move the buffer forward.
-// The stride can be the entire length of the pattern if there is a match or
-// there is no possible match inside the buffer, or the number of bytes where
-// the next possible match could start.
-func (s *Signature) checkMatch(buffer ByteBuffer) (bool, int) {
-	var (
-		mask      byte
-		pattern   byte
-		buffByte  byte
-		firstByte = s.Pattern[0] & s.Mask[0]
-		stride    = 0
-		matches   = true
-	)
-
-	if buffer.Size() != s.patternLen() {
-		panic("buffer size does not match pattern length")
-	}
-
-	for i := 0; i < s.patternLen(); i++ {
-		mask = s.Mask[i]
-		pattern = s.Pattern[i]
-		buffByte = buffer.Get(i)
-
-		// If the byte matches, use it as the stride.
-		// The stride should only be set once to be > 0, the first time a match is found.
-		if (firstByte == (mask & buffByte)) && stride == 0 {
-			stride = i
-		}
-
-		if (mask & pattern) != (mask & buffByte) {
-			matches = false
-
-			// If a stride is found, return false and the stride.
-			// If the stride is 0, continue iterating to find a match.
-			if stride > 0 {
-				return false, stride
-			}
-		}
-	}
-
-	if matches {
-		return true, s.patternLen()
-	} else {
-		// If no stride was found, use the length of the pattern.
-		if stride == 0 {
-			stride = s.patternLen()
-		}
-
-		return false, stride
-	}
+	return &SigMatches{Offsets: offsets, Signature: s}, nil
 }
