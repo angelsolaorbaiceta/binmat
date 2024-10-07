@@ -1,22 +1,20 @@
 package signature
 
-import "io"
-
 const (
 	MatchByte = 0xff
 	AnyByte   = 0x00
 )
 
-// buffSize is the size of the buffer used to read the file.
-// It's a multiple of the OS page size.
-// The typical page size is 4096 bytes.
-var buffSize int
-
+// A Signature is a pattern that can be matched in a file.
+// A Signature is defined by a name, a description, a pattern, and a mask.
+// The pattern is the sequence of bytes that must be matched.
+// The mask is applied to the pattern to define which bytes must be matched, and which can be ignored.
 type Signature struct {
-	Name          string
-	Description   string
-	pattern       []byte
-	mask          []byte
+	Name        string
+	Description string
+	pattern     []byte
+	mask        []byte
+	// maskedPattern is the pattern with the mask applied.
 	maskedPattern []byte
 }
 
@@ -57,72 +55,43 @@ func (s *Signature) length() int {
 	return len(s.pattern)
 }
 
-// CheckMatch reads the file from the reader and checks if the signature matches.
+// CheckMatch reads the file from the byte slice and checks if the signature matches.
+// It returns all the offsets where the signature matches.
 //
-// This function is designed to minimize the number of read syscalls by reading
-// the file in chunks of "buffSize" bytes.
-func (s *Signature) CheckMatch(r io.Reader) (*SigMatches, error) {
+// The function expects the full file contents in a byte slice, as binaries themselves
+// are usually small enough to fit in memory.
+func (s *Signature) CheckMatch(data []byte) *SigMatches {
 	var (
-		offset   = 0
-		offsets  []int
-		buffer   = NewRingBuffer(buffSize)
-		maxBytes = buffSize - s.length()
+		offsets     []int
+		fileByte    byte
+		patternByte byte
 
-		fileByte byte
+		patternFirstByte = s.pattern[0]
+		maskFirstByte    = s.mask[0]
 	)
 
-	if maxBytes < 0 {
-		maxBytes = buffSize
-	}
+	for i := 0; i < len(data)-s.length(); i++ {
+		fileByte = data[i] & maskFirstByte
 
-	// Read the entire buffer the first time.
-	n, err := buffer.Read(r, buffSize)
-	if err != nil {
-		return nil, err
-	}
+		if fileByte != patternFirstByte {
+			continue
+		}
 
-	for n > 0 {
-		for i := 0; i < n; i++ {
-			// If there isn't enough bytes to match the pattern, break.
-			if i+s.length() >= buffer.Size() {
+		// The byte at i matches the first byte of the pattern.
+		// Check if the rest of the pattern matches.
+		for j := 1; j < s.length(); j++ {
+			fileByte = data[i+j] & s.mask[j]
+			patternByte = s.maskedPattern[j]
+
+			if patternByte != fileByte {
 				break
 			}
 
-			// If the byte at i doesn't match the first byte of the pattern, continue.
-			fileByte = buffer.Get(i) & s.mask[0]
-			if fileByte != s.maskedPattern[0] {
-				continue
+			if j == s.length()-1 {
+				offsets = append(offsets, i)
 			}
-
-			// Check if the rest of the pattern matches.
-			for j := 1; j < s.length(); j++ {
-				fileByte = buffer.Get(i+j) & s.mask[j]
-
-				if s.maskedPattern[j] != fileByte {
-					break
-				}
-
-				// If the last iteration of the loop is reached, the pattern matches.
-				if j == s.length()-1 {
-					offsets = append(offsets, i+offset)
-				}
-			}
-		}
-
-		offset += maxBytes
-
-		// Read the next chunk of the file.
-		// We read less bytes than the buffer size to account for possible matches
-		// that span the buffer boundary.
-		n, err = buffer.Read(r, maxBytes)
-
-		if err == io.EOF {
-			// TODO check if this is necessary
-			break
-		} else if err != nil {
-			return nil, err
 		}
 	}
 
-	return &SigMatches{Offsets: offsets, Signature: s}, nil
+	return &SigMatches{Offsets: offsets, Signature: s}
 }
