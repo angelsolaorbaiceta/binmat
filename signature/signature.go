@@ -1,20 +1,14 @@
 package signature
 
-const (
-	MatchByte = 0xff
-	AnyByte   = 0x00
-)
-
 // A Signature is a pattern that can be matched in a file.
 // A Signature is defined by a name, a description, a pattern, and a mask.
 // The pattern is the sequence of bytes that must be matched.
 // The mask is applied to the pattern to define which bytes must be matched, and which can be ignored.
 type Signature struct {
-	Name        string
-	Description string
-	pattern     []byte
-	mask        []byte
-	// maskedPattern is the pattern with the mask applied.
+	Name          string
+	Description   string
+	pattern       []byte
+	mask          []byte
 	maskedPattern []byte
 }
 
@@ -23,7 +17,7 @@ type Signature struct {
 func Make(name, description string, pattern []byte) *Signature {
 	mask := make([]byte, len(pattern))
 	for i := range mask {
-		mask[i] = MatchByte
+		mask[i] = matchByte
 	}
 
 	return MakeWithMask(name, description, pattern, mask)

@@ -1,5 +1,10 @@
 package signature
 
+const (
+	matchByte = 0xff
+	anyByte   = 0x00
+)
+
 type matchOffsets []int
 
 func (m matchOffsets) len() int {
@@ -7,8 +12,9 @@ func (m matchOffsets) len() int {
 }
 
 type signaturePattern struct {
-	pattern       []byte
-	mask          []byte
+	pattern []byte
+	mask    []byte
+	// maskedPattern is the pattern with the mask applied.
 	maskedPattern []byte
 }
 
@@ -20,7 +26,7 @@ func (s *signaturePattern) length() int {
 func makePattern(pattern []byte) *signaturePattern {
 	mask := make([]byte, len(pattern))
 	for i := range mask {
-		mask[i] = MatchByte
+		mask[i] = matchByte
 	}
 
 	return makePatternWithMask(pattern, mask)

@@ -78,7 +78,7 @@ func TestMatchPatternWithoutMask(t *testing.T) {
 func TestMatchPatternWithMask(t *testing.T) {
 	sig := makePatternWithMask(
 		[]byte{0x01, 0x02, 0x03},
-		[]byte{MatchByte, AnyByte, MatchByte},
+		[]byte{matchByte, anyByte, matchByte},
 	)
 
 	t.Run("No enough bytes to match", func(t *testing.T) {
