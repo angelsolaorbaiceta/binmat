@@ -79,15 +79,24 @@ func ParseCondition(condition string) (condition, error) {
 				return nil, ErrConditionParse{
 					OffendingCond: condition,
 					Reason:        ParseErrReasonMissingLHSVar,
-					Details:       "AND requires a LHS variable",
+					Details:       "AND requires an LHS variable",
 				}
 			}
 
 			expr = &andCondition{lhs: lhsVar}
 			lhsVar = nil
 		case condOr:
-			// do something
-			panic("not implemented")
+			// Check there is a LHS variable to be used in the condition.
+			if lhsVar == nil {
+				return nil, ErrConditionParse{
+					OffendingCond: condition,
+					Reason:        ParseErrReasonMissingLHSVar,
+					Details:       "OR requires an LHS variable",
+				}
+			}
+
+			expr = &orCondition{lhs: lhsVar}
+			lhsVar = nil
 		case condNot:
 			// do something
 			panic("not implemented")
@@ -153,7 +162,7 @@ func ParseCondition(condition string) (condition, error) {
 
 	cond := func(vars map[string]bool) (bool, error) {
 		for name := range varNames {
-			if ok := vars[name]; !ok {
+			if _, ok := vars[name]; !ok {
 				return false, ErrMissingVarValue{OffendingName: name}
 			}
 		}
