@@ -145,4 +145,29 @@ func TestParseCondition(t *testing.T) {
 				}
 			})
 	}
+
+	t.Run("Simple NOT", func(t *testing.T) {
+		cond, _ := ParseCondition("NOT a")
+		if got, _ := cond(map[string]bool{"a": true}); got != false {
+			t.Fatalf("Expected false, got true")
+		}
+		if got, _ := cond(map[string]bool{"a": false}); got != true {
+			t.Fatalf("Expected true, got false")
+		}
+	})
+
+	t.Run("NOT expression shouldn't find a LHS", func(t *testing.T) {
+		_, err := ParseCondition("a NOT b")
+		if err == nil {
+			t.Fatalf("Expected parse error")
+		}
+
+		parseErr, ok := err.(ErrConditionParse)
+		if !ok {
+			t.Fatalf("Expected ErrConditionParse, got %v", err)
+		}
+		if parseErr.Reason != ParseErrLHSOnUnary {
+			t.Fatalf("Expected ErrConditionParse to contain a ParseErrLHSOnUnary reason")
+		}
+	})
 }

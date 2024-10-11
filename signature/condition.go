@@ -98,8 +98,16 @@ func ParseCondition(condition string) (condition, error) {
 			expr = &orCondition{lhs: lhsVar}
 			lhsVar = nil
 		case condNot:
-			// do something
-			panic("not implemented")
+			// There should not be a lhs as NOT only applies to one operand
+			if lhsVar != nil {
+				return nil, ErrConditionParse{
+					OffendingCond: condition,
+					Reason:        ParseErrLHSOnUnary,
+					Details:       "NOT didn't expect a variable on its left-hand-side",
+				}
+			}
+
+			expr = &notCondition{}
 		default:
 			// Check if token is a valid variable name.
 			// Invalid variable names directly trigger an error, as they are unrecoverable.
@@ -116,8 +124,8 @@ func ParseCondition(condition string) (condition, error) {
 				}
 			}
 
-			// If there is a binary expression without RHS, add it there
 			if binExpr, ok := expr.(binaryConditionExpr); ok {
+				// If there is a binary expression without RHS, add it here.
 				if binExpr.hasRhs() {
 					return nil, ErrConditionParse{
 						OffendingCond: condition,
@@ -127,6 +135,8 @@ func ParseCondition(condition string) (condition, error) {
 				} else {
 					binExpr.setRhs(&varCondition{varName: token})
 				}
+			} else if unExpr, ok := expr.(unaryConditionExpr); ok {
+				unExpr.setOp(&varCondition{varName: token})
 			} else {
 				lhsVar = &varCondition{varName: token}
 			}
