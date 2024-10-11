@@ -110,8 +110,11 @@ func ParseCondition(condition string) (condition, error) {
 			// If there is a binary expression without RHS, add it there
 			if binExpr, ok := expr.(binaryConditionExpr); ok {
 				if binExpr.hasRhs() {
-					// TODO:
-					// Error! What do we do with the new token?
+					return nil, ErrConditionParse{
+						OffendingCond: condition,
+						Reason:        ParseErrExtraTrailVar,
+						Details:       fmt.Sprintf("found trailing var '%s'", lhsVar),
+					}
 				} else {
 					binExpr.setRhs(&varCondition{varName: token})
 				}
@@ -133,6 +136,18 @@ func ParseCondition(condition string) (condition, error) {
 		} else {
 			// TODO
 			// Error: trailing extra variable
+		}
+	}
+
+	// Check if the expression is a binary one and it lacks the rhs.
+	// That is an incomplete expression.
+	if binExpr, ok := expr.(binaryConditionExpr); ok {
+		if !binExpr.hasRhs() {
+			return nil, ErrConditionParse{
+				OffendingCond: condition,
+				Reason:        ParseErrIncompleteExpr,
+				Details:       fmt.Sprintf("'%s'", binExpr),
+			}
 		}
 	}
 

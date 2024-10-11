@@ -47,6 +47,36 @@ func TestParseCondition(t *testing.T) {
 		})
 	}
 
+	t.Run("An extra trailing variable yields a parsing error", func(t *testing.T) {
+		_, err := ParseCondition("a AND b c")
+		if err == nil {
+			t.Fatalf("Expected parsing error, got none")
+		}
+
+		parseErr, ok := err.(ErrConditionParse)
+		if !ok {
+			t.Fatalf("Expected ErrConditionParse, got %v", err)
+		}
+		if parseErr.Reason != ParseErrExtraTrailVar {
+			t.Fatalf("Expected ErrConditionParse to contain a ParseErrExtraTrailVar reason")
+		}
+	})
+
+	t.Run("A missing trailing variable yields a parsing error", func(t *testing.T) {
+		_, err := ParseCondition("a AND")
+		if err == nil {
+			t.Fatalf("Expected parsing error, got none")
+		}
+
+		parseErr, ok := err.(ErrConditionParse)
+		if !ok {
+			t.Fatalf("Expected ErrConditionParse, got %v", err)
+		}
+		if parseErr.Reason != ParseErrIncompleteExpr {
+			t.Fatalf("Expected ErrConditionParse to contain a ParseErrIncompleteExpr reason")
+		}
+	})
+
 	t.Run("AND with missing LHS variable", func(t *testing.T) {
 		_, err := ParseCondition(" AND b")
 		if err == nil {

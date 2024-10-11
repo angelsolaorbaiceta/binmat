@@ -27,6 +27,8 @@ type ParseErrorReason string
 const (
 	ParseErrReasonContigVars    ParseErrorReason = "found two contiguous variables"
 	ParseErrReasonMissingLHSVar ParseErrorReason = "missing left-hand-side variable for condition"
+	ParseErrExtraTrailVar       ParseErrorReason = "extra trailing variable"
+	ParseErrIncompleteExpr      ParseErrorReason = "incomplete binary operation"
 )
 
 // ErrConditionParse is returned when a condition expression can't be parsed due
