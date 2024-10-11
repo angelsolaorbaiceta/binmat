@@ -5,10 +5,17 @@ const (
 	anyByte   = 0x00
 )
 
+// matchOffsets is a slice of offsets where a pattern matches.
 type matchOffsets []int
 
+// len returns the number of offsets.
 func (m matchOffsets) len() int {
 	return len(m)
+}
+
+// isMatch returns true if there is at least one match.
+func (m matchOffsets) isMatch() bool {
+	return m.len() > 0
 }
 
 type signaturePattern struct {
