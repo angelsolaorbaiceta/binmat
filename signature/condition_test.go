@@ -170,4 +170,25 @@ func TestParseCondition(t *testing.T) {
 			t.Fatalf("Expected ErrConditionParse to contain a ParseErrLHSOnUnary reason")
 		}
 	})
+
+	for _, tCase := range []struct {
+		input map[string]bool
+		want  bool
+	}{
+		{input: map[string]bool{"a": true, "b": true}, want: false},
+		{input: map[string]bool{"a": true, "b": false}, want: true},
+		{input: map[string]bool{"a": false, "b": true}, want: false},
+		{input: map[string]bool{"a": false, "b": false}, want: false},
+	} {
+		t.Run(
+			fmt.Sprintf("Condition: 'a AND NOT b'"),
+			func(t *testing.T) {
+				cond, _ := ParseCondition("a AND NOT b")
+				got, _ := cond(tCase.input)
+
+				if tCase.want != got {
+					t.Fatalf("Want %t, got %t with %v", tCase.want, got, tCase.input)
+				}
+			})
+	}
 }

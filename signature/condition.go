@@ -64,10 +64,25 @@ var (
 // If the expression can't be parsed, an ErrConditionParse error is returned.
 func ParseCondition(condition string) (condition, error) {
 	var (
-		varNames = make(map[string]struct{})
+		// The names of the variables in the condition are saved to validate that all
+		// of them have values in the passed in map.
+		varNames               = make(map[string]struct{})
+		expr     conditionExpr = nil
 		lhsVar   *varCondition
-		expr     conditionExpr
 	)
+
+	addExpr := func(exprToSet conditionExpr) {
+		if expr == nil {
+			expr = exprToSet
+		} else {
+			if binExpr, ok := expr.(binaryConditionExpr); ok {
+				binExpr.setRhs(exprToSet)
+			} else {
+				// TODO
+				panic("Oops, implement me")
+			}
+		}
+	}
 
 	for _, token := range tokenizerRe.Split(condition, -1) {
 		switch token {
@@ -106,8 +121,7 @@ func ParseCondition(condition string) (condition, error) {
 					Details:       "NOT didn't expect a variable on its left-hand-side",
 				}
 			}
-
-			expr = &notCondition{}
+			addExpr(&notCondition{})
 		default:
 			// Check if token is a valid variable name.
 			// Invalid variable names directly trigger an error, as they are unrecoverable.

@@ -1,12 +1,37 @@
 package signature
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // A conditionExpr is a boolean expression that can be evaluated given a map of
 // variable names associated with their boolean value.
 type conditionExpr interface {
 	fmt.Stringer
 
+	// append appends—when possible—the given condition to this condition.
+	// Appending means to add as a left-hand-side (lhs) operand.
+	//
+	// For example:
+	//
+	// 	a.append(b)
+	//
+	// Means to add "a" as the lhs of "b".
+	//
+	// It returns the top-level condition, whether that is this condition or the
+	// condition that's been appended.
+	// For example, if "a" is a variable and "b" is an AND operation, a.append(b)
+	// returns b, the AND operation.
+	//
+	// An error is returned in the cases where it doesn't make sense to append
+	// the condition.
+	// Implementors should return the target expression beside the error, when
+	// there is one.
+	// In other words, errors are returned together with the condition upon which
+	// the method is called.
+	append(expr conditionExpr) (conditionExpr, error)
+
+	// apply executes the boolean condition given the variable values in the map.
 	apply(map[string]bool) bool
 }
 
@@ -16,6 +41,7 @@ type binaryConditionExpr interface {
 	conditionExpr
 
 	hasRhs() bool
+	setLhs(expr conditionExpr)
 	setRhs(expr conditionExpr)
 }
 
@@ -28,112 +54,31 @@ type unaryConditionExpr interface {
 	setOp(expr conditionExpr)
 }
 
-// A varCondition is a single boolean variable. The result of the condition is
-// the value of the variable.
-type varCondition struct {
-	varName string
-}
-
-func (c varCondition) apply(vars map[string]bool) bool {
-	varVal, ok := vars[c.varName]
-	if !ok {
-		panic(fmt.Sprintf("'%s' variable not found in %v", c.varName, vars))
+// appendToCondition appends the toAppend condition to the base condition.
+// Depending on the nature of the base condition, adding a condition to it means
+// a different thing:
+//   - A variable condition can't be added to another variable condition.
+//   - A condition added to a unary condition adds it as its operand, overwriting
+//     the previous operand if there was any.
+//   - A condition added to a binary condition adds it as its right-hand-side
+//     operand, overwriting the previous operand if there was any.
+//
+// The base might be nil, in which case appending to it yields the target condition.
+// The toAppend condition, by contrast, can't be nil.
+// Passing a nil toAppend condition returns an errAppendToCond error.
+//
+// If there is an error appending a condition, an errAppendToCond error is
+// returned specifying the reason why the operation failed.
+func appendToCondition(baseCond, toAppend conditionExpr) (conditionExpr, error) {
+	if toAppend == nil {
+		return nil, errAppendToCond{
+			Reason:  ParseErrLogicError,
+			Details: "the condition to be appended is nil",
+		}
+	}
+	if baseCond == nil {
+		return toAppend, nil
 	}
 
-	return varVal
-}
-
-func (c varCondition) String() string {
-	return c.varName
-}
-
-// An andCondition is a binary operation that yields true if both operands are true.
-type andCondition struct {
-	lhs, rhs conditionExpr
-}
-
-func (c *andCondition) apply(vars map[string]bool) bool {
-	return c.lhs.apply(vars) && c.rhs.apply(vars)
-}
-
-func (c *andCondition) hasRhs() bool {
-	return c.rhs != nil
-}
-
-func (c *andCondition) setRhs(expr conditionExpr) {
-	c.rhs = expr
-}
-
-func (c *andCondition) String() string {
-	var lhs, rhs string
-
-	if c.lhs == nil {
-		lhs = "??"
-	} else {
-		lhs = c.lhs.String()
-	}
-
-	if c.rhs == nil {
-		rhs = "??"
-	} else {
-		rhs = c.rhs.String()
-	}
-
-	return fmt.Sprintf("%s AND %s", lhs, rhs)
-}
-
-// An orCondition is a binary operation that yields true if at least one operant is true.
-type orCondition struct {
-	lhs, rhs conditionExpr
-}
-
-func (c *orCondition) apply(vars map[string]bool) bool {
-	return c.lhs.apply(vars) || c.rhs.apply(vars)
-}
-
-func (c *orCondition) hasRhs() bool {
-	return c.rhs != nil
-}
-
-func (c *orCondition) setRhs(expr conditionExpr) {
-	c.rhs = expr
-}
-
-func (c *orCondition) String() string {
-	var lhs, rhs string
-
-	if c.lhs == nil {
-		lhs = "??"
-	} else {
-		lhs = c.lhs.String()
-	}
-
-	if c.rhs == nil {
-		rhs = "??"
-	} else {
-		rhs = c.rhs.String()
-	}
-
-	return fmt.Sprintf("%s OR %s", lhs, rhs)
-}
-
-// A notCondition is a unary operation that yields the opposite value of the source expression.
-type notCondition struct {
-	expr conditionExpr
-}
-
-func (c *notCondition) apply(vars map[string]bool) bool {
-	return !c.expr.apply(vars)
-}
-
-func (c *notCondition) hasOp() bool {
-	return c.expr != nil
-}
-
-func (c *notCondition) setOp(expr conditionExpr) {
-	c.expr = expr
-}
-
-func (c *notCondition) String() string {
-	return fmt.Sprintf("NOT %s", c.expr)
+	return baseCond.append(toAppend)
 }
