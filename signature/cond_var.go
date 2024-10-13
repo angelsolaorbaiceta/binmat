@@ -18,7 +18,7 @@ func (c *varCondition) append(expr conditionExpr) (conditionExpr, error) {
 	switch typedExpr := expr.(type) {
 	case *varCondition:
 		return c, errAppendToCond{
-			Reason:  ParseErrReasonContigVars,
+			Reason:  ParseErrContigVars,
 			Details: fmt.Sprintf("'%s' and '%s'", c, typedExpr),
 		}
 
@@ -33,7 +33,7 @@ func (c *varCondition) append(expr conditionExpr) (conditionExpr, error) {
 		return typedExpr, nil
 	}
 
-	return c, nil
+	panic("Forgot to handle a condition type?")
 }
 
 // apply simply returns the value of the variable as defined in the passed in map.

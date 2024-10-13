@@ -51,7 +51,7 @@ func TestConditions(t *testing.T) {
 		if !ok {
 			t.Fatalf("Expected errAppendToCond, got %v", err)
 		}
-		if parsedErr.Reason != ParseErrReasonContigVars {
+		if parsedErr.Reason != ParseErrContigVars {
 			t.Fatalf("Expected errAppendToCond to contain a ReasonContigVars reason")
 		}
 	})
@@ -151,6 +151,63 @@ func TestConditions(t *testing.T) {
 			}
 			if parsedErr.Reason != ParseErrBinaryAfterUnary {
 				t.Fatalf("Want reason ParseErrBinaryAfterUnary, got %v", parsedErr.Reason)
+			}
+		})
+	}
+
+	for _, tCase := range []struct {
+		a    binaryConditionExpr
+		want string
+	}{
+		{a: &andCondition{}, want: "?? AND b"},
+		{a: &orCondition{}, want: "?? OR b"},
+	} {
+		t.Run("Append a variable to a binary condition", func(t *testing.T) {
+			b := &varCondition{varName: "b"}
+			got, _ := appendToCondition(tCase.a, b)
+
+			if got.String() != tCase.want {
+				t.Fatalf("Want '%s', got '%s'", tCase.want, got.String())
+			}
+		})
+
+	}
+
+	for _, tCase := range []struct {
+		a    binaryConditionExpr
+		want string
+	}{
+		{a: &andCondition{}, want: "?? AND NOT ??"},
+		{a: &orCondition{}, want: "?? OR NOT ??"},
+	} {
+		t.Run("Append a unary condition to a binary condition", func(t *testing.T) {
+			b := &notCondition{}
+			got, _ := appendToCondition(tCase.a, b)
+
+			if got.String() != tCase.want {
+				t.Fatalf("Want '%s', got '%s'", tCase.want, got.String())
+			}
+		})
+	}
+
+	for _, a := range []binaryConditionExpr{
+		&andCondition{},
+		&orCondition{},
+	} {
+		t.Run("Can't append a binary condition to a binary condition", func(t *testing.T) {
+			b := &andCondition{}
+			_, err := appendToCondition(a, b)
+
+			if err == nil {
+				t.Fatalf("Expected error")
+			}
+
+			typedErr, ok := err.(errAppendToCond)
+			if !ok {
+				t.Fatalf("Want errAppendToCond, got %v", err)
+			}
+			if typedErr.Reason != ParseErrContigBinary {
+				t.Fatalf("Want reason ParseErrContigBinary, got %v", typedErr.Reason)
 			}
 		})
 	}

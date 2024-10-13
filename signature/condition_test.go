@@ -44,7 +44,7 @@ func TestParseCondition(t *testing.T) {
 				if !ok {
 					t.Fatalf("Expected ErrConditionParse, got %v", err)
 				}
-				if parseErr.Reason != ParseErrReasonContigVars {
+				if parseErr.Reason != ParseErrContigVars {
 					t.Fatalf("Expected ErrConditionParse to contain a ReasonContigVars reason")
 				}
 			})
@@ -98,7 +98,7 @@ func TestParseCondition(t *testing.T) {
 				if !ok {
 					t.Fatalf("Expected ErrConditionParse, got %v", err)
 				}
-				if parseErr.Reason != ParseErrReasonMissingLHSVar {
+				if parseErr.Reason != ParseErrMissingLHSVar {
 					t.Fatalf("Expected ErrConditionParse to contain a ParseErrReasonMissingLHSVar reason")
 				}
 			})

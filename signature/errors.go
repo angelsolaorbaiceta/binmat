@@ -25,14 +25,15 @@ func (e ErrMissingVarValue) Error() string {
 type ParseErrorReason string
 
 const (
-	ParseErrLogicError          ParseErrorReason = "called the parsing logic incorrectly"
-	ParseErrReasonContigVars    ParseErrorReason = "found two contiguous variables"
-	ParseErrUnaryNoLHS          ParseErrorReason = "unary operations don't have a left-hand-side operand"
-	ParseErrBinaryAfterUnary    ParseErrorReason = "unary operations can't act upon binary conditions"
-	ParseErrReasonMissingLHSVar ParseErrorReason = "missing left-hand-side operand for condition"
-	ParseErrExtraTrailVar       ParseErrorReason = "extra trailing variable"
-	ParseErrIncompleteExpr      ParseErrorReason = "incomplete binary operation"
-	ParseErrLHSOnUnary          ParseErrorReason = "unary operation doesn't expect a LHS"
+	ParseErrLogicError       ParseErrorReason = "called the parsing logic incorrectly"
+	ParseErrContigVars       ParseErrorReason = "found two contiguous variables"
+	ParseErrUnaryNoLHS       ParseErrorReason = "unary operations don't have a left-hand-side operand"
+	ParseErrBinaryAfterUnary ParseErrorReason = "unary operations can't act upon binary conditions"
+	ParseErrContigBinary     ParseErrorReason = "found two contiguous binary conditions"
+	ParseErrMissingLHSVar    ParseErrorReason = "missing left-hand-side operand for condition"
+	ParseErrExtraTrailVar    ParseErrorReason = "extra trailing variable"
+	ParseErrIncompleteExpr   ParseErrorReason = "incomplete binary operation"
+	ParseErrLHSOnUnary       ParseErrorReason = "unary operation doesn't expect a LHS"
 )
 
 // ErrConditionParse is returned when a condition expression can't be parsed due

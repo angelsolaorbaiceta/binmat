@@ -8,7 +8,19 @@ type andCondition struct {
 }
 
 func (c *andCondition) append(expr conditionExpr) (conditionExpr, error) {
-	return nil, nil
+	switch typedExpr := expr.(type) {
+	case *varCondition, unaryConditionExpr:
+		c.setRhs(typedExpr)
+		return c, nil
+
+	case binaryConditionExpr:
+		return c, errAppendToCond{
+			Reason:  ParseErrContigBinary,
+			Details: fmt.Sprintf("can't append %s to %s", typedExpr, c),
+		}
+	}
+
+	panic("Forgot to handle a condition type?")
 }
 
 func (c *andCondition) apply(vars map[string]bool) bool {

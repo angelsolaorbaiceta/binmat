@@ -26,7 +26,7 @@ func (c *notCondition) append(expr conditionExpr) (conditionExpr, error) {
 		}
 	}
 
-	return c, nil
+	panic("Forgot to handle a condition type?")
 }
 
 func (c *notCondition) apply(vars map[string]bool) bool {

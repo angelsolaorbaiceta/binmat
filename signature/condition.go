@@ -93,7 +93,7 @@ func ParseCondition(condition string) (condition, error) {
 			if lhsVar == nil {
 				return nil, ErrConditionParse{
 					OffendingCond: condition,
-					Reason:        ParseErrReasonMissingLHSVar,
+					Reason:        ParseErrMissingLHSVar,
 					Details:       "AND requires an LHS variable",
 				}
 			}
@@ -105,7 +105,7 @@ func ParseCondition(condition string) (condition, error) {
 			if lhsVar == nil {
 				return nil, ErrConditionParse{
 					OffendingCond: condition,
-					Reason:        ParseErrReasonMissingLHSVar,
+					Reason:        ParseErrMissingLHSVar,
 					Details:       "OR requires an LHS variable",
 				}
 			}
@@ -133,7 +133,7 @@ func ParseCondition(condition string) (condition, error) {
 			if lhsVar != nil {
 				return nil, ErrConditionParse{
 					OffendingCond: condition,
-					Reason:        ParseErrReasonContigVars,
+					Reason:        ParseErrContigVars,
 					Details:       fmt.Sprintf("variables '%s' and '%s'", lhsVar, token),
 				}
 			}

@@ -7,8 +7,26 @@ type orCondition struct {
 	lhs, rhs conditionExpr
 }
 
-func (c orCondition) append(expr conditionExpr) (conditionExpr, error) {
-	return nil, nil
+// append to a binary operation follows these rules:
+//   - A variable condition can be appended (e.g. "?? AND b")
+//   - A unary condition can be appended (e.g. "?? AND NOT ??")
+//   - A binary condition can't be appended (e.g. "?? AND OR ??")
+//
+// In every case, this binary condition (the receiver of the method) is returned.
+func (c *orCondition) append(expr conditionExpr) (conditionExpr, error) {
+	switch typedExpr := expr.(type) {
+	case *varCondition, unaryConditionExpr:
+		c.setRhs(typedExpr)
+		return c, nil
+
+	case binaryConditionExpr:
+		return c, errAppendToCond{
+			Reason:  ParseErrContigBinary,
+			Details: fmt.Sprintf("can't append %s to %s", typedExpr, c),
+		}
+	}
+
+	panic("Forgot to handle a condition type?")
 }
 
 func (c *orCondition) apply(vars map[string]bool) bool {
