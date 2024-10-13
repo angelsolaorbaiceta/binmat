@@ -13,14 +13,14 @@ type notCondition struct {
 //   - A binary condition can't be appended (e.g. "NOT AND" doesn't make sense)
 //
 // In any case, the unary condition is returned.
-func (c *notCondition) append(expr conditionExpr) (conditionExpr, error) {
+func (c *notCondition) append(expr conditionExpr) (conditionExpr, *errAppendToCond) {
 	switch expr.(type) {
 	case *varCondition, unaryConditionExpr:
 		c.setOp(expr)
 		return c, nil
 
 	case binaryConditionExpr:
-		return c, errAppendToCond{
+		return c, &errAppendToCond{
 			Reason:  ParseErrBinaryAfterUnary,
 			Details: fmt.Sprintf("%s can't be appended to %s", expr, c),
 		}

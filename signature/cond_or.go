@@ -13,14 +13,14 @@ type orCondition struct {
 //   - A binary condition can't be appended (e.g. "?? AND OR ??")
 //
 // In every case, this binary condition (the receiver of the method) is returned.
-func (c *orCondition) append(expr conditionExpr) (conditionExpr, error) {
+func (c *orCondition) append(expr conditionExpr) (conditionExpr, *errAppendToCond) {
 	switch typedExpr := expr.(type) {
 	case *varCondition, unaryConditionExpr:
 		c.setRhs(typedExpr)
 		return c, nil
 
 	case binaryConditionExpr:
-		return c, errAppendToCond{
+		return c, &errAppendToCond{
 			Reason:  ParseErrContigBinary,
 			Details: fmt.Sprintf("can't append %s to %s", typedExpr, c),
 		}

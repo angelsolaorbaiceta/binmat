@@ -14,16 +14,16 @@ type varCondition struct {
 //   - Can't append to a unary condition, as these don't have a lhs.
 //   - Appending to a binary condition is allowed. The returned value is the
 //     binary operation, not the variable.
-func (c *varCondition) append(expr conditionExpr) (conditionExpr, error) {
+func (c *varCondition) append(expr conditionExpr) (conditionExpr, *errAppendToCond) {
 	switch typedExpr := expr.(type) {
 	case *varCondition:
-		return c, errAppendToCond{
+		return c, &errAppendToCond{
 			Reason:  ParseErrContigVars,
 			Details: fmt.Sprintf("'%s' and '%s'", c, typedExpr),
 		}
 
 	case unaryConditionExpr:
-		return c, errAppendToCond{
+		return c, &errAppendToCond{
 			Reason:  ParseErrLHSOnUnary,
 			Details: fmt.Sprintf("%s doesn't accept %s as lhs", typedExpr, c),
 		}

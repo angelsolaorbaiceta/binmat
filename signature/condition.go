@@ -62,121 +62,91 @@ var (
 //   - "a AND NOT (b OR c)"
 //
 // If the expression can't be parsed, an ErrConditionParse error is returned.
-func ParseCondition(condition string) (condition, error) {
+func ParseCondition(condition string) (condition, *ErrConditionParse) {
 	var (
 		// The names of the variables in the condition are saved to validate that all
 		// of them have values in the passed in map.
 		varNames               = make(map[string]struct{})
 		expr     conditionExpr = nil
-		lhsVar   *varCondition
+		err      *errAppendToCond
 	)
-
-	addExpr := func(exprToSet conditionExpr) {
-		if expr == nil {
-			expr = exprToSet
-		} else {
-			if binExpr, ok := expr.(binaryConditionExpr); ok {
-				binExpr.setRhs(exprToSet)
-			} else {
-				// TODO
-				panic("Oops, implement me")
-			}
-		}
-	}
 
 	for _, token := range tokenizerRe.Split(condition, -1) {
 		switch token {
 		case "":
 			continue
 		case condAnd:
-			// Check there is a LHS variable to be used in the condition.
-			if lhsVar == nil {
-				return nil, ErrConditionParse{
-					OffendingCond: condition,
-					Reason:        ParseErrMissingLHSVar,
-					Details:       "AND requires an LHS variable",
-				}
-			}
-
-			expr = &andCondition{lhs: lhsVar}
-			lhsVar = nil
+			expr, err = appendToCondition(expr, &andCondition{})
 		case condOr:
-			// Check there is a LHS variable to be used in the condition.
-			if lhsVar == nil {
-				return nil, ErrConditionParse{
-					OffendingCond: condition,
-					Reason:        ParseErrMissingLHSVar,
-					Details:       "OR requires an LHS variable",
-				}
-			}
-
-			expr = &orCondition{lhs: lhsVar}
-			lhsVar = nil
+			expr, err = appendToCondition(expr, &orCondition{})
 		case condNot:
-			// There should not be a lhs as NOT only applies to one operand
-			if lhsVar != nil {
-				return nil, ErrConditionParse{
-					OffendingCond: condition,
-					Reason:        ParseErrLHSOnUnary,
-					Details:       "NOT didn't expect a variable on its left-hand-side",
-				}
-			}
-			addExpr(&notCondition{})
+			expr, err = appendToCondition(expr, &notCondition{})
 		default:
 			// Check if token is a valid variable name.
 			// Invalid variable names directly trigger an error, as they are unrecoverable.
 			if !isValidVarName(token) {
-				return nil, ErrInvalidVarName{OffendingName: token}
+				err = &errAppendToCond{
+					Reason: ParseErrInvalidVarName,
+					Details: fmt.Sprintf(
+						"'%s' must contain between 1 and 16 lowercase letters, numbers and underscores",
+						token,
+					),
+				}
 			}
 
 			// Check that there isn't already a left-hand-side unused variable.
-			if lhsVar != nil {
-				return nil, ErrConditionParse{
-					OffendingCond: condition,
-					Reason:        ParseErrContigVars,
-					Details:       fmt.Sprintf("variables '%s' and '%s'", lhsVar, token),
-				}
-			}
+			// if lhsVar != nil {
+			// 	return nil, ErrConditionParse{
+			// 		OffendingCond: condition,
+			// 		Reason:        ParseErrContigVars,
+			// 		Details:       fmt.Sprintf("variables '%s' and '%s'", lhsVar, token),
+			// 	}
+			// }
 
-			if binExpr, ok := expr.(binaryConditionExpr); ok {
-				// If there is a binary expression without RHS, add it here.
-				if binExpr.hasRhs() {
-					return nil, ErrConditionParse{
-						OffendingCond: condition,
-						Reason:        ParseErrExtraTrailVar,
-						Details:       fmt.Sprintf("found trailing var '%s'", lhsVar),
-					}
-				} else {
-					binExpr.setRhs(&varCondition{varName: token})
-				}
-			} else if unExpr, ok := expr.(unaryConditionExpr); ok {
-				unExpr.setOp(&varCondition{varName: token})
-			} else {
-				lhsVar = &varCondition{varName: token}
-			}
+			// if binExpr, ok := expr.(binaryConditionExpr); ok {
+			// 	// If there is a binary expression without RHS, add it here.
+			// 	if binExpr.hasRhs() {
+			// 		return nil, ErrConditionParse{
+			// 			OffendingCond: condition,
+			// 			Reason:        ParseErrExtraTrailVar,
+			// 			Details:       fmt.Sprintf("found trailing var '%s'", lhsVar),
+			// 		}
+			// 	} else {
+			// 		binExpr.setRhs(&varCondition{varName: token})
+			// 	}
+			// } else if unExpr, ok := expr.(unaryConditionExpr); ok {
+			// 	unExpr.setOp(&varCondition{varName: token})
+			// } else {
+			// 	lhsVar = &varCondition{varName: token}
+			// }
 
+			expr, err = appendToCondition(expr, &varCondition{varName: token})
 			varNames[token] = struct{}{}
+		}
+
+		if err != nil {
+			return nil, parseErrorFrom(err, condition)
 		}
 	}
 
 	// There might be an unused single lhs. Check if there is no expression, in
 	// which case the lhs is the expression. If there was an expression in place
 	// this is an error (an extra trailing variable).
-	if lhsVar != nil {
-		if expr == nil {
-			expr = lhsVar
-			lhsVar = nil
-		} else {
-			// TODO
-			// Error: trailing extra variable
-		}
-	}
+	// if lhsVar != nil {
+	// 	if expr == nil {
+	// 		expr = lhsVar
+	// 		lhsVar = nil
+	// 	} else {
+	// 		// TODO
+	// 		// Error: trailing extra variable
+	// 	}
+	// }
 
 	// Check if the expression is a binary one and it lacks the rhs.
 	// That is an incomplete expression.
 	if binExpr, ok := expr.(binaryConditionExpr); ok {
 		if !binExpr.hasRhs() {
-			return nil, ErrConditionParse{
+			return nil, &ErrConditionParse{
 				OffendingCond: condition,
 				Reason:        ParseErrIncompleteExpr,
 				Details:       fmt.Sprintf("'%s'", binExpr),

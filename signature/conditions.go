@@ -29,7 +29,7 @@ type conditionExpr interface {
 	// there is one.
 	// In other words, errors are returned together with the condition upon which
 	// the method is called.
-	append(expr conditionExpr) (conditionExpr, error)
+	append(expr conditionExpr) (conditionExpr, *errAppendToCond)
 
 	// apply executes the boolean condition given the variable values in the map.
 	apply(map[string]bool) bool
@@ -69,9 +69,9 @@ type unaryConditionExpr interface {
 //
 // If there is an error appending a condition, an errAppendToCond error is
 // returned specifying the reason why the operation failed.
-func appendToCondition(baseCond, toAppend conditionExpr) (conditionExpr, error) {
+func appendToCondition(baseCond, toAppend conditionExpr) (conditionExpr, *errAppendToCond) {
 	if toAppend == nil {
-		return nil, errAppendToCond{
+		return nil, &errAppendToCond{
 			Reason:  ParseErrLogicError,
 			Details: "the condition to be appended is nil",
 		}

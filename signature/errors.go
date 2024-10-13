@@ -2,15 +2,6 @@ package signature
 
 import "fmt"
 
-// ErrInvalidVarName is returned when a variable name is invalid.
-type ErrInvalidVarName struct {
-	OffendingName string
-}
-
-func (e ErrInvalidVarName) Error() string {
-	return fmt.Sprintf("invalid variable name: '%s'", e.OffendingName)
-}
-
 // ErrMissingVarValue is returned from the condition function when the map of
 // variable values doesn't contain the value of a variable that's part of the
 // condition expression.
@@ -25,6 +16,7 @@ func (e ErrMissingVarValue) Error() string {
 type ParseErrorReason string
 
 const (
+	ParseErrInvalidVarName   ParseErrorReason = "invalid variable name"
 	ParseErrLogicError       ParseErrorReason = "called the parsing logic incorrectly"
 	ParseErrContigVars       ParseErrorReason = "found two contiguous variables"
 	ParseErrUnaryNoLHS       ParseErrorReason = "unary operations don't have a left-hand-side operand"
@@ -42,6 +34,14 @@ type ErrConditionParse struct {
 	OffendingCond string
 	Reason        ParseErrorReason
 	Details       string
+}
+
+func parseErrorFrom(err *errAppendToCond, condition string) *ErrConditionParse {
+	return &ErrConditionParse{
+		OffendingCond: condition,
+		Reason:        err.Reason,
+		Details:       err.Details,
+	}
 }
 
 func (e ErrConditionParse) Error() string {

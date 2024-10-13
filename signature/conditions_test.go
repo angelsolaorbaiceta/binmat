@@ -27,11 +27,7 @@ func TestConditions(t *testing.T) {
 		if err == nil {
 			t.Fatalf("Expected error")
 		}
-		parsedErr, ok := err.(errAppendToCond)
-		if !ok {
-			t.Fatalf("Expected errAppendToCond, got %v", err)
-		}
-		if parsedErr.Reason != ParseErrLogicError {
+		if err.Reason != ParseErrLogicError {
 			t.Fatalf("Expected errAppendToCond to contain a ParseLogicError reason")
 		}
 	})
@@ -47,11 +43,7 @@ func TestConditions(t *testing.T) {
 		if err == nil {
 			t.Fatalf("Expected error")
 		}
-		parsedErr, ok := err.(errAppendToCond)
-		if !ok {
-			t.Fatalf("Expected errAppendToCond, got %v", err)
-		}
-		if parsedErr.Reason != ParseErrContigVars {
+		if err.Reason != ParseErrContigVars {
 			t.Fatalf("Expected errAppendToCond to contain a ReasonContigVars reason")
 		}
 	})
@@ -67,11 +59,7 @@ func TestConditions(t *testing.T) {
 		if err == nil {
 			t.Fatalf("Expected error")
 		}
-		parsedErr, ok := err.(errAppendToCond)
-		if !ok {
-			t.Fatalf("Expected errAppendToCond, got %v", err)
-		}
-		if parsedErr.Reason != ParseErrLHSOnUnary {
+		if err.Reason != ParseErrLHSOnUnary {
 			t.Fatalf("Expected errAppendToCond to contain ParseErrLHSOnUnary a reason")
 		}
 	})
@@ -145,12 +133,8 @@ func TestConditions(t *testing.T) {
 				t.Fatalf("Expected an error")
 			}
 
-			parsedErr, ok := err.(errAppendToCond)
-			if !ok {
-				t.Fatalf("Expected errAppendToCond, got %v", parsedErr)
-			}
-			if parsedErr.Reason != ParseErrBinaryAfterUnary {
-				t.Fatalf("Want reason ParseErrBinaryAfterUnary, got %v", parsedErr.Reason)
+			if err.Reason != ParseErrBinaryAfterUnary {
+				t.Fatalf("Want reason ParseErrBinaryAfterUnary, got %v", err.Reason)
 			}
 		})
 	}
@@ -202,12 +186,8 @@ func TestConditions(t *testing.T) {
 				t.Fatalf("Expected error")
 			}
 
-			typedErr, ok := err.(errAppendToCond)
-			if !ok {
-				t.Fatalf("Want errAppendToCond, got %v", err)
-			}
-			if typedErr.Reason != ParseErrContigBinary {
-				t.Fatalf("Want reason ParseErrContigBinary, got %v", typedErr.Reason)
+			if err.Reason != ParseErrContigBinary {
+				t.Fatalf("Want reason ParseErrContigBinary, got %v", err.Reason)
 			}
 		})
 	}

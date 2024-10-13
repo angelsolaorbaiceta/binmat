@@ -40,11 +40,7 @@ func TestParseCondition(t *testing.T) {
 				if err == nil {
 					t.Fatalf("Expected parsing error, got none")
 				}
-				parseErr, ok := err.(ErrConditionParse)
-				if !ok {
-					t.Fatalf("Expected ErrConditionParse, got %v", err)
-				}
-				if parseErr.Reason != ParseErrContigVars {
+				if err.Reason != ParseErrContigVars {
 					t.Fatalf("Expected ErrConditionParse to contain a ReasonContigVars reason")
 				}
 			})
@@ -56,11 +52,7 @@ func TestParseCondition(t *testing.T) {
 			t.Fatalf("Expected parsing error, got none")
 		}
 
-		parseErr, ok := err.(ErrConditionParse)
-		if !ok {
-			t.Fatalf("Expected ErrConditionParse, got %v", err)
-		}
-		if parseErr.Reason != ParseErrExtraTrailVar {
+		if err.Reason != ParseErrExtraTrailVar {
 			t.Fatalf("Expected ErrConditionParse to contain a ParseErrExtraTrailVar reason")
 		}
 	})
@@ -71,11 +63,7 @@ func TestParseCondition(t *testing.T) {
 			t.Fatalf("Expected parsing error, got none")
 		}
 
-		parseErr, ok := err.(ErrConditionParse)
-		if !ok {
-			t.Fatalf("Expected ErrConditionParse, got %v", err)
-		}
-		if parseErr.Reason != ParseErrIncompleteExpr {
+		if err.Reason != ParseErrIncompleteExpr {
 			t.Fatalf("Expected ErrConditionParse to contain a ParseErrIncompleteExpr reason")
 		}
 	})
@@ -94,11 +82,7 @@ func TestParseCondition(t *testing.T) {
 					t.Fatalf("Expected parse error")
 				}
 
-				parseErr, ok := err.(ErrConditionParse)
-				if !ok {
-					t.Fatalf("Expected ErrConditionParse, got %v", err)
-				}
-				if parseErr.Reason != ParseErrMissingLHSVar {
+				if err.Reason != ParseErrMissingLHSVar {
 					t.Fatalf("Expected ErrConditionParse to contain a ParseErrReasonMissingLHSVar reason")
 				}
 			})
@@ -162,11 +146,7 @@ func TestParseCondition(t *testing.T) {
 			t.Fatalf("Expected parse error")
 		}
 
-		parseErr, ok := err.(ErrConditionParse)
-		if !ok {
-			t.Fatalf("Expected ErrConditionParse, got %v", err)
-		}
-		if parseErr.Reason != ParseErrLHSOnUnary {
+		if err.Reason != ParseErrLHSOnUnary {
 			t.Fatalf("Expected ErrConditionParse to contain a ParseErrLHSOnUnary reason")
 		}
 	})
