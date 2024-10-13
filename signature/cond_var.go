@@ -9,7 +9,7 @@ type varCondition struct {
 	varName string
 }
 
-// append in a variable condition follows these rules:
+// append to a variable condition follows these rules:
 //   - Can't append to another variable: two contiguous variables don't make sense.
 //   - Can't append to a unary condition, as these don't have a lhs.
 //   - Appending to a binary condition is allowed. The returned value is the

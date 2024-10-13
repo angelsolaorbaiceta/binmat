@@ -103,4 +103,55 @@ func TestConditions(t *testing.T) {
 			t.Fatalf("Want '%s', got '%s'", want, got.String())
 		}
 	})
+
+	t.Run("Append a variable to a unary condition", func(t *testing.T) {
+		var (
+			a    = &notCondition{}
+			b    = &varCondition{varName: "b"}
+			want = "NOT b"
+		)
+
+		got, _ := appendToCondition(a, b)
+
+		if got.String() != want {
+			t.Fatalf("Want '%s', got '%s'", want, got.String())
+		}
+	})
+
+	t.Run("Append a unary condition to another unary condition", func(t *testing.T) {
+		var (
+			a    = &notCondition{}
+			b    = &notCondition{}
+			want = "NOT NOT ??"
+		)
+
+		got, _ := appendToCondition(a, b)
+
+		if got.String() != want {
+			t.Fatalf("Want '%s', got '%s'", want, got.String())
+		}
+	})
+
+	for _, b := range []binaryConditionExpr{
+		&andCondition{},
+		&orCondition{},
+	} {
+		t.Run("Can't append a binary condition to a unary condition", func(t *testing.T) {
+			a := &notCondition{}
+
+			_, err := appendToCondition(a, b)
+
+			if err == nil {
+				t.Fatalf("Expected an error")
+			}
+
+			parsedErr, ok := err.(errAppendToCond)
+			if !ok {
+				t.Fatalf("Expected errAppendToCond, got %v", parsedErr)
+			}
+			if parsedErr.Reason != ParseErrBinaryAfterUnary {
+				t.Fatalf("Want reason ParseErrBinaryAfterUnary, got %v", parsedErr.Reason)
+			}
+		})
+	}
 }

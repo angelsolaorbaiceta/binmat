@@ -28,6 +28,7 @@ const (
 	ParseErrLogicError          ParseErrorReason = "called the parsing logic incorrectly"
 	ParseErrReasonContigVars    ParseErrorReason = "found two contiguous variables"
 	ParseErrUnaryNoLHS          ParseErrorReason = "unary operations don't have a left-hand-side operand"
+	ParseErrBinaryAfterUnary    ParseErrorReason = "unary operations can't act upon binary conditions"
 	ParseErrReasonMissingLHSVar ParseErrorReason = "missing left-hand-side operand for condition"
 	ParseErrExtraTrailVar       ParseErrorReason = "extra trailing variable"
 	ParseErrIncompleteExpr      ParseErrorReason = "incomplete binary operation"
