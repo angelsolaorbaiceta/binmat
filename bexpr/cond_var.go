@@ -25,33 +25,6 @@ type varCondition struct {
 	varName string
 }
 
-// append to a variable condition follows these rules:
-//   - Can't append to another variable: two contiguous variables don't make sense.
-//   - Can't append to a unary condition, as these don't have a lhs.
-//   - Appending to a binary condition is allowed. The returned value is the
-//     binary operation, not the variable.
-// func (c *varCondition) append(expr conditionExpr) (conditionExpr, *errAppendToCond) {
-// 	switch typedExpr := expr.(type) {
-// 	case *varCondition:
-// 		return c, &errAppendToCond{
-// 			Reason:  ParseErrContigVars,
-// 			Details: fmt.Sprintf("'%s' and '%s'", c, typedExpr),
-// 		}
-
-// 	case unaryConditionExpr:
-// 		return c, &errAppendToCond{
-// 			Reason:  ParseErrLHSOnUnary,
-// 			Details: fmt.Sprintf("%s doesn't accept %s as lhs", typedExpr, c),
-// 		}
-
-// 	case binaryConditionExpr:
-// 		typedExpr.setLhs(c)
-// 		return typedExpr, nil
-// 	}
-
-// 	panic("Forgot to handle a condition type?")
-// }
-
 // apply simply returns the value of the variable as defined in the passed in map.
 // Panics if the map doesn't include the required variable, thus, the presence
 // of it should be verified before passing it here.

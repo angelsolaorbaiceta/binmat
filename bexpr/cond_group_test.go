@@ -5,18 +5,18 @@ import (
 	"testing"
 )
 
-func TestNotExpr(t *testing.T) {
+func TestGroupExpr(t *testing.T) {
 	t.Run("without operation", func(t *testing.T) {
-		not := &notCondition{}
+		group := &groupCondition{}
 
-		if not.hasOp() {
+		if group.hasOp() {
 			t.Fatal("Want no op, got op")
 		}
-		if got := not.getOp(); got != nil {
+		if got := group.getOp(); got != nil {
 			t.Fatal("Want no op, got op")
 		}
-		if got := not.String(); got != "NOT ??" {
-			t.Fatalf("Want 'NOT ??', got %s", got)
+		if got := group.String(); got != "(??)" {
+			t.Fatalf("Want '(??)', got %s", got)
 		}
 	})
 
@@ -24,22 +24,23 @@ func TestNotExpr(t *testing.T) {
 		op   conditionExpr
 		want string
 	}{
-		{op: &varCondition{varName: "a"}, want: "NOT a"},
-		{op: &notCondition{}, want: "NOT NOT ??"},
+		{op: &varCondition{varName: "a"}, want: "(a)"},
+		{op: &groupCondition{}, want: "((??))"},
+		{op: &notCondition{}, want: "(NOT ??)"},
 	} {
 		t.Run(
 			fmt.Sprintf("set '%s' expecting '%s'", tCase.op, tCase.want),
 			func(t *testing.T) {
-				not := &notCondition{}
-				not.setOp(tCase.op)
+				group := &groupCondition{}
+				group.setOp(tCase.op)
 
-				if !not.hasOp() {
+				if !group.hasOp() {
 					t.Fatal("Want operation, got none")
 				}
-				if got := not.getOp(); got != tCase.op {
+				if got := group.getOp(); got != tCase.op {
 					t.Fatalf("Want %s, got %s", tCase.op, got)
 				}
-				if got := not.String(); got != tCase.want {
+				if got := group.String(); got != tCase.want {
 					t.Fatalf("Want '%s', got '%s'", tCase.want, got)
 				}
 			})
@@ -52,8 +53,8 @@ func TestNotExpr(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("can't set binary op '%s'", op),
 			func(t *testing.T) {
-				not := &notCondition{}
-				err := not.setOp(op)
+				group := &groupCondition{}
+				err := group.setOp(op)
 
 				if err == nil {
 					t.Fatal("Expected error")
@@ -67,49 +68,39 @@ func TestNotExpr(t *testing.T) {
 	}{
 		{
 			ops:  []conditionExpr{&notCondition{}, &notCondition{}},
-			want: "NOT NOT NOT ??",
+			want: "(NOT NOT ??)",
 		},
 		{
 			ops:  []conditionExpr{&notCondition{}, &notCondition{}, &varCondition{varName: "a"}},
-			want: "NOT NOT NOT a",
+			want: "(NOT NOT a)",
+		},
+		{
+			ops:  []conditionExpr{&notCondition{}, &groupCondition{}, &varCondition{varName: "a"}},
+			want: "(NOT (a))",
 		},
 	} {
 		t.Run(
 			fmt.Sprintf("nested '%s'", tCase.want),
 			func(t *testing.T) {
-				not := &notCondition{}
+				group := &groupCondition{}
 				for _, op := range tCase.ops {
-					not.setOp(op)
+					group.setOp(op)
 				}
 
-				if got := not.String(); got != tCase.want {
+				if got := group.String(); got != tCase.want {
 					t.Fatalf("Want '%s', got '%s'", tCase.want, got)
 				}
 			})
 	}
 
-	for _, not := range []*notCondition{
-		{op: &varCondition{varName: "a"}},
-		{op: &notCondition{&varCondition{varName: "a"}}},
+	for _, group := range []*groupCondition{
+		{expr: &varCondition{varName: "a"}},
+		{expr: &notCondition{&varCondition{varName: "a"}}},
 	} {
 		t.Run(
-			fmt.Sprintf("Can't append to complete %s", not),
+			fmt.Sprintf("Can't append to complete %s", group),
 			func(t *testing.T) {
-				err := not.setOp(&varCondition{varName: "xyz"})
-				if err == nil {
-					t.Fatal("Expected error")
-				}
-			})
-	}
-
-	for _, not := range []*notCondition{
-		{op: &varCondition{varName: "a"}},
-		{op: &notCondition{&varCondition{varName: "a"}}},
-	} {
-		t.Run(
-			fmt.Sprintf("Can't append to complete %s", not),
-			func(t *testing.T) {
-				err := not.setOp(&varCondition{varName: "xyz"})
+				err := group.setOp(&varCondition{varName: "xyz"})
 				if err == nil {
 					t.Fatal("Expected error")
 				}
