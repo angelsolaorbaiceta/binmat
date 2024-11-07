@@ -34,7 +34,7 @@ type binaryConditionExpr interface {
 	conditionExpr
 
 	hasRhs() bool
-	setRhs(expr conditionExpr)
+	setRhs(expr conditionExpr) *errAppendToCond
 	getRhs() conditionExpr
 
 	hasLhs() bool

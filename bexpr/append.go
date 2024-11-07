@@ -66,6 +66,7 @@ func appendToCondition(baseCond, toAppend conditionExpr) (conditionExpr, *errApp
 	return nil, &errAppendToCond{baseCond, toAppend}
 }
 
+// TODO: unify with logic in previous method to avoid duplicating the logic.
 // canAppend determines if b can appended to a (a.append(b)).
 func canAppend(a, b conditionExpr) bool {
 	result := false

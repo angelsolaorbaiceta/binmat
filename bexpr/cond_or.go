@@ -7,28 +7,6 @@ type orCondition struct {
 	lhs, rhs conditionExpr
 }
 
-// append to a binary operation follows these rules:
-//   - A variable condition can be appended (e.g. "?? AND b")
-//   - A unary condition can be appended (e.g. "?? AND NOT ??")
-//   - A binary condition can't be appended (e.g. "?? AND OR ??")
-//
-// In every case, this binary condition (the receiver of the method) is returned.
-// func (c *orCondition) append(expr conditionExpr) (conditionExpr, *errAppendToCond) {
-// 	switch typedExpr := expr.(type) {
-// 	case *varCondition, unaryConditionExpr:
-// 		c.setRhs(typedExpr)
-// 		return c, nil
-
-// 	case binaryConditionExpr:
-// 		return c, &errAppendToCond{
-// 			Reason:  ParseErrContigBinary,
-// 			Details: fmt.Sprintf("can't append %s to %s", typedExpr, c),
-// 		}
-// 	}
-
-// 	panic("Forgot to handle a condition type?")
-// }
-
 func (c *orCondition) apply(vars map[string]bool) bool {
 	return c.lhs.apply(vars) || c.rhs.apply(vars)
 }
@@ -37,17 +15,19 @@ func (c *orCondition) hasRhs() bool {
 	return c.rhs != nil
 }
 
-func (c *orCondition) setRhs(expr conditionExpr) {
+func (c *orCondition) setRhs(expr conditionExpr) *errAppendToCond {
+	if !canAppend(c, expr) {
+		return &errAppendToCond{c, expr}
+	}
+
 	if c.rhs == nil {
 		c.rhs = expr
-	} else {
-		switch exprType := c.rhs.(type) {
-		case binaryConditionExpr:
-			exprType.setRhs(expr)
-		case unaryConditionExpr:
-			exprType.setOp(expr)
-		}
+		return nil
 	}
+
+	_, err := appendToCondition(c.rhs, expr)
+
+	return err
 }
 
 func (c *orCondition) getRhs() conditionExpr {
