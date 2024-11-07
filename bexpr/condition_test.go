@@ -1,4 +1,4 @@
-package signature
+package bexpr
 
 import (
 	"fmt"
@@ -38,10 +38,10 @@ func TestParseCondition(t *testing.T) {
 				_, err := ParseCondition(input)
 
 				if err == nil {
-					t.Fatalf("Expected parsing error, got none")
+					t.Fatal("Expected parsing error, got none")
 				}
-				if err.Reason != ParseErrContigVars {
-					t.Fatalf("Expected ErrConditionParse to contain a ReasonContigVars reason")
+				if err.Reason != ParseErrInvalidAppend {
+					t.Fatal("Wrong reason")
 				}
 			})
 	}
@@ -49,22 +49,22 @@ func TestParseCondition(t *testing.T) {
 	t.Run("An extra trailing variable yields a parsing error", func(t *testing.T) {
 		_, err := ParseCondition("a AND b c")
 		if err == nil {
-			t.Fatalf("Expected parsing error, got none")
+			t.Fatal("Expected parsing error, got none")
 		}
 
-		if err.Reason != ParseErrExtraTrailVar {
-			t.Fatalf("Expected ErrConditionParse to contain a ParseErrExtraTrailVar reason")
+		if err.Reason != ParseErrInvalidAppend {
+			t.Fatal("Wrong reason")
 		}
 	})
 
 	t.Run("A missing trailing variable yields a parsing error", func(t *testing.T) {
 		_, err := ParseCondition("a AND")
 		if err == nil {
-			t.Fatalf("Expected parsing error, got none")
+			t.Fatal("Want parsing error, got none")
 		}
 
 		if err.Reason != ParseErrIncompleteExpr {
-			t.Fatalf("Expected ErrConditionParse to contain a ParseErrIncompleteExpr reason")
+			t.Fatal("Wrong reason")
 		}
 	})
 
@@ -79,11 +79,11 @@ func TestParseCondition(t *testing.T) {
 			func(t *testing.T) {
 				_, err := ParseCondition(cond)
 				if err == nil {
-					t.Fatalf("Expected parse error")
+					t.Fatal("Expected parse error")
 				}
 
-				if err.Reason != ParseErrMissingLHSVar {
-					t.Fatalf("Expected ErrConditionParse to contain a ParseErrReasonMissingLHSVar reason")
+				if err.Reason != ParseErrIncompleteExpr {
+					t.Fatal("Wrong reason")
 				}
 			})
 	}
@@ -143,11 +143,11 @@ func TestParseCondition(t *testing.T) {
 	t.Run("NOT expression shouldn't find a LHS", func(t *testing.T) {
 		_, err := ParseCondition("a NOT b")
 		if err == nil {
-			t.Fatalf("Expected parse error")
+			t.Fatal("Expected parse error")
 		}
 
-		if err.Reason != ParseErrLHSOnUnary {
-			t.Fatalf("Expected ErrConditionParse to contain a ParseErrLHSOnUnary reason")
+		if err.Reason != ParseErrInvalidAppend {
+			t.Fatalf("Wrong reason: %s", err.Reason)
 		}
 	})
 
@@ -160,15 +160,13 @@ func TestParseCondition(t *testing.T) {
 		{input: map[string]bool{"a": false, "b": true}, want: false},
 		{input: map[string]bool{"a": false, "b": false}, want: false},
 	} {
-		t.Run(
-			fmt.Sprintf("Condition: 'a AND NOT b'"),
-			func(t *testing.T) {
-				cond, _ := ParseCondition("a AND NOT b")
-				got, _ := cond(tCase.input)
+		t.Run("Condition: 'a AND NOT b'", func(t *testing.T) {
+			cond, _ := ParseCondition("a AND NOT b")
+			got, _ := cond(tCase.input)
 
-				if tCase.want != got {
-					t.Fatalf("Want %t, got %t with %v", tCase.want, got, tCase.input)
-				}
-			})
+			if tCase.want != got {
+				t.Fatalf("Want %t, got %t with %v", tCase.want, got, tCase.input)
+			}
+		})
 	}
 }

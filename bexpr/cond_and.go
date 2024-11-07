@@ -1,4 +1,4 @@
-package signature
+package bexpr
 
 import "fmt"
 
@@ -7,21 +7,21 @@ type andCondition struct {
 	lhs, rhs conditionExpr
 }
 
-func (c *andCondition) append(expr conditionExpr) (conditionExpr, *errAppendToCond) {
-	switch typedExpr := expr.(type) {
-	case *varCondition, unaryConditionExpr:
-		c.setRhs(typedExpr)
-		return c, nil
+// func (c *andCondition) append(expr conditionExpr) (conditionExpr, *errAppendToCond) {
+// 	switch typedExpr := expr.(type) {
+// 	case *varCondition, unaryConditionExpr:
+// 		c.setRhs(typedExpr)
+// 		return c, nil
 
-	case binaryConditionExpr:
-		return c, &errAppendToCond{
-			Reason:  ParseErrContigBinary,
-			Details: fmt.Sprintf("can't append %s to %s", typedExpr, c),
-		}
-	}
+// 	case binaryConditionExpr:
+// 		return c, &errAppendToCond{
+// 			Reason:  ParseErrContigBinary,
+// 			Details: fmt.Sprintf("can't append %s to %s", typedExpr, c),
+// 		}
+// 	}
 
-	panic("Forgot to handle a condition type?")
-}
+// 	panic("Forgot to handle a condition type?")
+// }
 
 func (c *andCondition) apply(vars map[string]bool) bool {
 	return c.lhs.apply(vars) && c.rhs.apply(vars)
@@ -31,21 +31,33 @@ func (c *andCondition) hasRhs() bool {
 	return c.rhs != nil
 }
 
-func (c *andCondition) setLhs(expr conditionExpr) {
-	c.lhs = expr
-}
-
 func (c *andCondition) setRhs(expr conditionExpr) {
 	if c.rhs == nil {
 		c.rhs = expr
 	} else {
-		switch exprType := expr.(type) {
+		switch exprType := c.rhs.(type) {
 		case binaryConditionExpr:
 			exprType.setRhs(expr)
 		case unaryConditionExpr:
 			exprType.setOp(expr)
 		}
 	}
+}
+
+func (c *andCondition) getRhs() conditionExpr {
+	return c.rhs
+}
+
+func (c *andCondition) hasLhs() bool {
+	return c.lhs != nil
+}
+
+func (c *andCondition) setLhs(expr conditionExpr) {
+	c.lhs = expr
+}
+
+func (c *andCondition) getLhs() conditionExpr {
+	return c.lhs
 }
 
 func (c *andCondition) String() string {

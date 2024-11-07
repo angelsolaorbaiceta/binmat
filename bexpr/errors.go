@@ -1,4 +1,4 @@
-package signature
+package bexpr
 
 import "fmt"
 
@@ -16,6 +16,7 @@ func (e ErrMissingVarValue) Error() string {
 type ParseErrorReason string
 
 const (
+	ParseErrInvalidAppend    ParseErrorReason = "invalid append attempt"
 	ParseErrInvalidVarName   ParseErrorReason = "invalid variable name"
 	ParseErrLogicError       ParseErrorReason = "called the parsing logic incorrectly"
 	ParseErrContigVars       ParseErrorReason = "found two contiguous variables"
@@ -36,14 +37,6 @@ type ErrConditionParse struct {
 	Details       string
 }
 
-func parseErrorFrom(err *errAppendToCond, condition string) *ErrConditionParse {
-	return &ErrConditionParse{
-		OffendingCond: condition,
-		Reason:        err.Reason,
-		Details:       err.Details,
-	}
-}
-
 func (e ErrConditionParse) Error() string {
 	return fmt.Sprintf(
 		"can't parse the expression '%s'. Reason: %s (%s)",
@@ -52,15 +45,21 @@ func (e ErrConditionParse) Error() string {
 }
 
 // errAppendToCond is the error returned by the appendToCondition() function
-// when there is an error appending a condition to another condition.
+// when there is an error appending an expression to another expression.
 type errAppendToCond struct {
-	Reason  ParseErrorReason
-	Details string
+	a, b conditionExpr
 }
 
 func (e errAppendToCond) Error() string {
 	return fmt.Sprintf(
-		"can't append the condition. Reason: %s (%s)",
-		e.Reason, e.Details,
+		"can't append %s and %s", e.a, e.b,
 	)
+}
+
+func (e errAppendToCond) toParseErr(offendingCondition string) *ErrConditionParse {
+	return &ErrConditionParse{
+		OffendingCond: offendingCondition,
+		Reason:        ParseErrInvalidAppend,
+		Details:       e.a.String(),
+	}
 }
