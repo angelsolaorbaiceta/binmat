@@ -161,7 +161,11 @@ func TestParseCondition(t *testing.T) {
 		{input: map[string]bool{"a": false, "b": false}, want: false},
 	} {
 		t.Run("Condition: 'a AND NOT b'", func(t *testing.T) {
-			cond, _ := ParseCondition("a AND NOT b")
+			cond, err := ParseCondition("a AND NOT b")
+			if err != nil {
+				t.Fatalf("Want no error, got %s", err)
+			}
+
 			got, _ := cond(tCase.input)
 
 			if tCase.want != got {

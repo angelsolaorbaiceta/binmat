@@ -54,12 +54,11 @@ func appendToCondition(baseCond, toAppend conditionExpr) (conditionExpr, *errApp
 		// In both cases the binary expression is returned as the parent.
 		// If there was a rhs already, it returns an error.
 		case varConditionExpr, unaryConditionExpr:
-			if a.hasRhs() {
-				return nil, &errAppendToCond{baseCond, toAppend}
+			if err := a.setRhs(b); err != nil {
+				return nil, err
+			} else {
+				return a, nil
 			}
-
-			a.setRhs(b)
-			return a, nil
 		}
 	}
 
