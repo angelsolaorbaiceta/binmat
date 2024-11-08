@@ -16,8 +16,9 @@ type conditionExpr interface {
 	fmt.Stringer
 
 	// apply executes the boolean condition given the variable values in the map.
-	// TODO: return error if a variable is missing to avoid searching for var names.
-	apply(map[string]bool) bool
+	// Returns an error if the expression uses a variable that's not in the passed
+	// in variables map.
+	apply(map[string]bool) (bool, *ErrMissingVarValue)
 }
 
 // A varConditionExpr is a boolean variable that can be evaluated as being either
@@ -75,36 +76,4 @@ func isCondComplete(cond conditionExpr) bool {
 	}
 
 	panic("Forgot to handle a condition type?")
-}
-
-// searchVarNames iterates the condition expression tree in a breadth-first search
-// fashion, recording all variable names found.
-func searchVarNames(expr conditionExpr) map[string]struct{} {
-	var (
-		varNames = make(map[string]struct{})
-		q        = &queue[conditionExpr]{}
-	)
-
-	q.push(expr)
-
-	for {
-		item, ok := q.pop()
-		if !ok {
-			break
-		}
-
-		switch typedCond := item.(type) {
-		case *varCondition:
-			varNames[typedCond.varName] = struct{}{}
-
-		case unaryConditionExpr:
-			q.push(typedCond.getOp())
-
-		case binaryConditionExpr:
-			q.push(typedCond.getLhs())
-			q.push(typedCond.getRhs())
-		}
-	}
-
-	return varNames
 }

@@ -7,8 +7,13 @@ type notCondition struct {
 	op conditionExpr
 }
 
-func (c *notCondition) apply(vars map[string]bool) bool {
-	return !c.op.apply(vars)
+func (c *notCondition) apply(vars map[string]bool) (bool, *ErrMissingVarValue) {
+	a, err := c.op.apply(vars)
+	if err != nil {
+		return false, err
+	}
+
+	return !a, nil
 }
 
 // TODO: this shouldn't be necessary

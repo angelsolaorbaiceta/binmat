@@ -1,7 +1,6 @@
 package bexpr
 
 import (
-	"fmt"
 	"regexp"
 )
 
@@ -26,15 +25,13 @@ type varCondition struct {
 }
 
 // apply simply returns the value of the variable as defined in the passed in map.
-// Panics if the map doesn't include the required variable, thus, the presence
-// of it should be verified before passing it here.
-func (c *varCondition) apply(vars map[string]bool) bool {
+func (c *varCondition) apply(vars map[string]bool) (bool, *ErrMissingVarValue) {
 	varVal, ok := vars[c.varName]
 	if !ok {
-		panic(fmt.Sprintf("'%s' variable not found in %v", c.varName, vars))
+		return false, &ErrMissingVarValue{OffendingName: c.varName}
 	}
 
-	return varVal
+	return varVal, nil
 }
 
 func (c *varCondition) getName() string {

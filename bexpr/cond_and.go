@@ -7,8 +7,17 @@ type andCondition struct {
 	lhs, rhs conditionExpr
 }
 
-func (c *andCondition) apply(vars map[string]bool) bool {
-	return c.lhs.apply(vars) && c.rhs.apply(vars)
+func (c *andCondition) apply(vars map[string]bool) (bool, *ErrMissingVarValue) {
+	a, err := c.lhs.apply(vars)
+	if err != nil {
+		return false, err
+	}
+	b, err := c.rhs.apply(vars)
+	if err != nil {
+		return false, err
+	}
+
+	return a && b, nil
 }
 
 func (c *andCondition) hasRhs() bool {

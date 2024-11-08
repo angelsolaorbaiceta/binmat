@@ -6,7 +6,7 @@ type groupCondition struct {
 	expr conditionExpr
 }
 
-func (c *groupCondition) apply(vars map[string]bool) bool {
+func (c *groupCondition) apply(vars map[string]bool) (bool, *ErrMissingVarValue) {
 	return c.expr.apply(vars)
 }
 

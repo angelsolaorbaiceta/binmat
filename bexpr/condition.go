@@ -22,7 +22,7 @@ import (
 //
 // Here's a list of the possible errors the condition function can return:
 //   - ErrMissingVarValue: when a variable in the expression isn't provided in the argument.
-type condition func(map[string]bool) (bool, error)
+type condition func(map[string]bool) (bool, *ErrMissingVarValue)
 
 // ParseCondition parses a condition string and returns a condition function.
 //
@@ -57,20 +57,12 @@ func ParseCondition(condition string) (condition, *ErrConditionParse) {
 		return nil, err
 	}
 
-	varNames := searchVarNames(expr)
-
-	cond := func(vars map[string]bool) (bool, error) {
-		for name := range varNames {
-			if _, ok := vars[name]; !ok {
-				return false, ErrMissingVarValue{OffendingName: name}
-			}
-		}
-
+	cond := func(vars map[string]bool) (bool, *ErrMissingVarValue) {
 		if expr == nil {
 			return false, nil
 		}
 
-		return expr.apply(vars), nil
+		return expr.apply(vars)
 	}
 
 	return cond, nil
