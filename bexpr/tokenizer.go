@@ -46,10 +46,6 @@ func makeTokenIter(condition string) *tokenIter {
 	}
 }
 
-func (iter *tokenIter) tokensLeft() int {
-	return len(iter.tokens) - iter.nextIdx
-}
-
 func (iter *tokenIter) hasNext() bool {
 	return !iter.done
 }
