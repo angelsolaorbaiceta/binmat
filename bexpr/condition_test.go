@@ -6,6 +6,25 @@ import (
 )
 
 func TestParseCondition(t *testing.T) {
+
+	type conditionTestCase struct {
+		input map[string]bool
+		want  bool
+	}
+
+	runConditionTestCase := func(condition string, tCase conditionTestCase) {
+		cond, err := ParseCondition(condition)
+		if err != nil {
+			t.Fatalf("Want no error, got %s", err)
+		}
+
+		got, _ := cond(tCase.input)
+
+		if tCase.want != got {
+			t.Fatalf("Want %t, got %t with %v", tCase.want, got, tCase.input)
+		}
+	}
+
 	t.Run("Empty condition always returns false", func(t *testing.T) {
 		cond, _ := ParseCondition("")
 
@@ -151,33 +170,18 @@ func TestParseCondition(t *testing.T) {
 		}
 	})
 
-	for _, tCase := range []struct {
-		input map[string]bool
-		want  bool
-	}{
+	for _, tCase := range []conditionTestCase{
 		{input: map[string]bool{"a": true, "b": true}, want: false},
 		{input: map[string]bool{"a": true, "b": false}, want: true},
 		{input: map[string]bool{"a": false, "b": true}, want: false},
 		{input: map[string]bool{"a": false, "b": false}, want: false},
 	} {
 		t.Run("Condition: 'a AND NOT b'", func(t *testing.T) {
-			cond, err := ParseCondition("a AND NOT b")
-			if err != nil {
-				t.Fatalf("Want no error, got %s", err)
-			}
-
-			got, _ := cond(tCase.input)
-
-			if tCase.want != got {
-				t.Fatalf("Want %t, got %t with %v", tCase.want, got, tCase.input)
-			}
+			runConditionTestCase("a AND NOT b", tCase)
 		})
 	}
 
-	for _, tCase := range []struct {
-		input map[string]bool
-		want  bool
-	}{
+	for _, tCase := range []conditionTestCase{
 		{input: map[string]bool{"a": false, "b": false, "c": false}, want: false},
 		{input: map[string]bool{"a": false, "b": false, "c": true}, want: false},
 		{input: map[string]bool{"a": false, "b": true, "c": false}, want: false},
@@ -188,16 +192,7 @@ func TestParseCondition(t *testing.T) {
 		{input: map[string]bool{"a": true, "b": true, "c": true}, want: false},
 	} {
 		t.Run("Condition: 'a AND (b AND NOT c)'", func(t *testing.T) {
-			cond, err := ParseCondition("a AND (b AND NOT c)")
-			if err != nil {
-				t.Fatalf("Want no error, got %s", err)
-			}
-
-			got, _ := cond(tCase.input)
-
-			if tCase.want != got {
-				t.Fatalf("Want %t, got %t with %v", tCase.want, got, tCase.input)
-			}
+			runConditionTestCase("a AND (b AND NOT c)", tCase)
 		})
 	}
 }
