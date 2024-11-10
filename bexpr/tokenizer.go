@@ -15,8 +15,7 @@ const (
 
 var (
 	tokensStr = fmt.Sprintf(
-		`%s|%s|%s|%s|%s|%s`,
-		varNameStr,
+		`[a-z0-9_]+|%s|%s|%s|%s|%s`,
 		tokenAnd,
 		tokenOr,
 		tokenNot,
