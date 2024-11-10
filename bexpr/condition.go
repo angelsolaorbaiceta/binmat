@@ -4,8 +4,8 @@ import (
 	"fmt"
 )
 
-// A condition is a function that takes a map of pattern names and returns true
-// if the condition is met.
+// A Condition is a function that takes a map of pattern names and returns true
+// if the Condition is met.
 //
 // Example:
 //
@@ -17,12 +17,12 @@ import (
 //	cond(map[string]bool{"a": true, "b": false, "c": true}) // false
 //	cond(map[string]bool{"a": true, "b": true, "c": false}) // true
 //
-// All variables in the condition must be in the patterns map, otherwise an error
+// All variables in the Condition must be in the patterns map, otherwise an error
 // will be returned.
 //
-// Here's a list of the possible errors the condition function can return:
+// Here's a list of the possible errors the Condition function can return:
 //   - ErrMissingVarValue: when a variable in the expression isn't provided in the argument.
-type condition func(map[string]bool) (bool, *ErrMissingVarValue)
+type Condition func(map[string]bool) (bool, *ErrMissingVarValue)
 
 // ParseCondition parses a condition string and returns a condition function.
 //
@@ -50,7 +50,7 @@ type condition func(map[string]bool) (bool, *ErrMissingVarValue)
 //   - "a AND NOT (b OR c)"
 //
 // If the expression can't be parsed, an ErrConditionParse error is returned.
-func ParseCondition(condition string) (condition, *ErrConditionParse) {
+func ParseCondition(condition string) (Condition, *ErrConditionParse) {
 	iter := makeTokenIter(condition)
 	expr, err := parse(iter)
 	if err != nil {
@@ -82,12 +82,12 @@ outerLoop:
 			continue
 
 		case tokenGroupStart:
-			// Parse the entire group (recursively) and push it to the stack
-			group, parseErr := parse(iter)
+			groupExpr, parseErr := parse(iter)
 			if parseErr != nil {
 				return nil, parseErr
 			}
 
+			group := &groupCondition{expr: groupExpr}
 			expr, err = appendToCondition(expr, group)
 			if err != nil {
 				return nil, err.toParseErr(iter.condition)

@@ -173,4 +173,31 @@ func TestParseCondition(t *testing.T) {
 			}
 		})
 	}
+
+	for _, tCase := range []struct {
+		input map[string]bool
+		want  bool
+	}{
+		{input: map[string]bool{"a": false, "b": false, "c": false}, want: false},
+		{input: map[string]bool{"a": false, "b": false, "c": true}, want: false},
+		{input: map[string]bool{"a": false, "b": true, "c": false}, want: false},
+		{input: map[string]bool{"a": false, "b": true, "c": true}, want: false},
+		{input: map[string]bool{"a": true, "b": false, "c": false}, want: false},
+		{input: map[string]bool{"a": true, "b": false, "c": true}, want: false},
+		{input: map[string]bool{"a": true, "b": true, "c": false}, want: true},
+		{input: map[string]bool{"a": true, "b": true, "c": true}, want: false},
+	} {
+		t.Run("Condition: 'a AND (b AND NOT c)'", func(t *testing.T) {
+			cond, err := ParseCondition("a AND (b AND NOT c)")
+			if err != nil {
+				t.Fatalf("Want no error, got %s", err)
+			}
+
+			got, _ := cond(tCase.input)
+
+			if tCase.want != got {
+				t.Fatalf("Want %t, got %t with %v", tCase.want, got, tCase.input)
+			}
+		})
+	}
 }
