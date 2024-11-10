@@ -2,7 +2,7 @@ package bexpr
 
 import "regexp"
 
-var tokenizerRe = regexp.MustCompile(`[\s()]+`)
+var tokensRe = regexp.MustCompile(`\s*([a-zA-Z]+|AND|OR|NOT|\(|\))\s*`)
 
 const (
 	tokenAnd        = "AND"
@@ -24,15 +24,9 @@ type tokenIter struct {
 
 func makeTokenIter(condition string) *tokenIter {
 	var (
-		tokens = make([]string, 0)
+		tokens = tokensRe.FindAllString(condition, -1)
 		done   = false
 	)
-
-	for _, token := range tokenizerRe.Split(condition, -1) {
-		if token != "" {
-			tokens = append(tokens, token)
-		}
-	}
 
 	if len(tokens) < 1 {
 		done = true
@@ -62,4 +56,14 @@ func (iter *tokenIter) next() string {
 	}
 
 	return next
+}
+
+func (iter *tokenIter) getAll() []string {
+	tokens := make([]string, 0, len(iter.tokens))
+
+	for iter.hasNext() {
+		tokens = append(tokens, iter.next())
+	}
+
+	return tokens
 }
