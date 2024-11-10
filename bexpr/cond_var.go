@@ -1,10 +1,14 @@
 package bexpr
 
 import (
+	"fmt"
 	"regexp"
 )
 
-var varNameRe = regexp.MustCompile(`^[a-z0-9_]{1,16}$`)
+var (
+	varNameStr = `[a-z0-9_]{1,16}`
+	varNameRe  = regexp.MustCompile(fmt.Sprintf(`^%s$`, varNameStr))
+)
 
 // isValidVarName returns true if the name is a valid variable name.
 //

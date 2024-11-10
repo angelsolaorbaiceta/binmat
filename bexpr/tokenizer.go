@@ -1,8 +1,9 @@
 package bexpr
 
-import "regexp"
-
-var tokensRe = regexp.MustCompile(`[a-zA-Z]+|AND|OR|NOT|\(|\)`)
+import (
+	"fmt"
+	"regexp"
+)
 
 const (
 	tokenAnd        = "AND"
@@ -10,6 +11,20 @@ const (
 	tokenNot        = "NOT"
 	tokenGroupStart = "("
 	tokenGroupEnd   = ")"
+)
+
+var (
+	tokensStr = fmt.Sprintf(
+		`%s|%s|%s|%s|%s|%s`,
+		varNameStr,
+		tokenAnd,
+		tokenOr,
+		tokenNot,
+		regexp.QuoteMeta(tokenGroupStart),
+		regexp.QuoteMeta(tokenGroupEnd),
+	)
+
+	tokensRe = regexp.MustCompile(tokensStr)
 )
 
 // A tokenIter is a token iterator.
