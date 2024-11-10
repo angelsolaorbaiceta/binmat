@@ -13,6 +13,12 @@ func TestTokenize(t *testing.T) {
 		if len(got) != len(want) {
 			t.Fatalf("Want size %d, got %d", len(want), len(got))
 		}
+		for i, gotToken := range got {
+			wantToken := want[i]
+			if gotToken != wantToken {
+				t.Fatalf("Want token '%s', got '%s'", wantToken, gotToken)
+			}
+		}
 	})
 
 	t.Run("tokenize removes whitespace", func(t *testing.T) {
@@ -24,6 +30,12 @@ func TestTokenize(t *testing.T) {
 
 		if len(got) != len(want) {
 			t.Fatalf("Want size %d, got %d", len(want), len(got))
+		}
+		for i, gotToken := range got {
+			wantToken := want[i]
+			if gotToken != wantToken {
+				t.Fatalf("Want token '%s', got '%s'", wantToken, gotToken)
+			}
 		}
 	})
 }

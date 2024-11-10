@@ -2,7 +2,7 @@ package bexpr
 
 import "regexp"
 
-var tokensRe = regexp.MustCompile(`\s*([a-zA-Z]+|AND|OR|NOT|\(|\))\s*`)
+var tokensRe = regexp.MustCompile(`[a-zA-Z]+|AND|OR|NOT|\(|\)`)
 
 const (
 	tokenAnd        = "AND"
