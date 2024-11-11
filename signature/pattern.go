@@ -18,6 +18,7 @@ func (m matchOffsets) isMatch() bool {
 	return m.len() > 0
 }
 
+// A signaturePattern is a single stream of bytes that files are matched against.
 type signaturePattern struct {
 	pattern []byte
 	mask    []byte
