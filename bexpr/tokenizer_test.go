@@ -3,6 +3,8 @@ package bexpr
 import (
 	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTokenize(t *testing.T) {
@@ -23,15 +25,7 @@ func TestTokenize(t *testing.T) {
 					got  = iter.getAll()
 				)
 
-				if len(got) != len(tCase.want) {
-					t.Fatalf("Want size %d, got %d", len(tCase.want), len(got))
-				}
-				for i, gotToken := range got {
-					wantToken := tCase.want[i]
-					if gotToken != wantToken {
-						t.Fatalf("Want token '%s', got '%s'", wantToken, gotToken)
-					}
-				}
+				assert.Equal(t, tCase.want, got)
 			})
 	}
 }

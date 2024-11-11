@@ -1,5 +1,5 @@
 name: ls
 description: The ls command line
 patterns:
-  a: 74 fc ff ff c6 05 19 45
+  a: { 74 fc ff ff c6 05 19 45 }
 condition: a

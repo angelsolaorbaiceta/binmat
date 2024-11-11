@@ -3,6 +3,8 @@ package bexpr
 import (
 	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestParseCondition(t *testing.T) {
@@ -20,9 +22,7 @@ func TestParseCondition(t *testing.T) {
 
 		got, _ := cond(tCase.input)
 
-		if tCase.want != got {
-			t.Fatalf("Want %t, got %t with %v", tCase.want, got, tCase.input)
-		}
+		assert.Equal(t, tCase.want, got)
 	}
 
 	t.Run("Empty condition always returns false", func(t *testing.T) {

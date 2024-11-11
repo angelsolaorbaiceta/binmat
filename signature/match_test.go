@@ -2,6 +2,8 @@ package signature
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMatchPatternWithoutMask(t *testing.T) {
@@ -13,9 +15,7 @@ func TestMatchPatternWithoutMask(t *testing.T) {
 			matches = sig.checkMatch(data)
 		)
 
-		if matches.len() != 0 {
-			t.Fatalf("expected 0 offsets, got %d", len(matches))
-		}
+		assert.Equal(t, 0, matches.len())
 	})
 
 	t.Run("One match starting at offset 0", func(t *testing.T) {
@@ -24,12 +24,7 @@ func TestMatchPatternWithoutMask(t *testing.T) {
 			matches = sig.checkMatch(data)
 		)
 
-		if matches.len() != 1 {
-			t.Fatalf("expected 1 offset, got %d", matches.len())
-		}
-		if matches[0] != 0 {
-			t.Fatalf("expected offset 0, got %d", matches[0])
-		}
+		assert.Equal(t, matchOffsets{0}, matches)
 	})
 
 	t.Run("One match starting at offset 2", func(t *testing.T) {
@@ -38,12 +33,7 @@ func TestMatchPatternWithoutMask(t *testing.T) {
 			matches = sig.checkMatch(data)
 		)
 
-		if matches.len() != 1 {
-			t.Fatalf("expected 1 offset, got %d", matches.len())
-		}
-		if matches[0] != 2 {
-			t.Fatalf("expected offset 2, got %d", matches[0])
-		}
+		assert.Equal(t, matchOffsets{2}, matches)
 	})
 
 	t.Run("No match", func(t *testing.T) {
@@ -52,9 +42,7 @@ func TestMatchPatternWithoutMask(t *testing.T) {
 			matches = sig.checkMatch(data)
 		)
 
-		if matches.len() != 0 {
-			t.Fatalf("expected 0 offsets, got %d", matches.len())
-		}
+		assert.Equal(t, 0, matches.len())
 	})
 
 	t.Run("Multiple matches", func(t *testing.T) {
@@ -63,15 +51,7 @@ func TestMatchPatternWithoutMask(t *testing.T) {
 			matches = sig.checkMatch(data)
 		)
 
-		if matches.len() != 2 {
-			t.Fatalf("expected 2 offsets, got %d", matches.len())
-		}
-		if matches[0] != 0 {
-			t.Fatalf("expected offset 0, got %d", matches[0])
-		}
-		if matches[1] != 5 {
-			t.Fatalf("expected offset 5, got %d", matches[1])
-		}
+		assert.Equal(t, matchOffsets{0, 5}, matches)
 	})
 }
 
@@ -87,9 +67,7 @@ func TestMatchPatternWithMask(t *testing.T) {
 			matches = sig.checkMatch(data)
 		)
 
-		if matches.len() != 0 {
-			t.Fatalf("expected 0 offsets, got %d", matches.len())
-		}
+		assert.Equal(t, 0, matches.len())
 	})
 
 	t.Run("One match starting at offset 0", func(t *testing.T) {
@@ -98,12 +76,7 @@ func TestMatchPatternWithMask(t *testing.T) {
 			matches = sig.checkMatch(data)
 		)
 
-		if matches.len() != 1 {
-			t.Fatalf("expected 1 offset, got %d", matches.len())
-		}
-		if matches[0] != 0 {
-			t.Fatalf("expected offset 0, got %d", matches[0])
-		}
+		assert.Equal(t, matchOffsets{0}, matches)
 	})
 
 	t.Run("One match starting at offset 2", func(t *testing.T) {
@@ -112,12 +85,7 @@ func TestMatchPatternWithMask(t *testing.T) {
 			matches = sig.checkMatch(data)
 		)
 
-		if matches.len() != 1 {
-			t.Fatalf("expected 1 offset, got %d", matches.len())
-		}
-		if matches[0] != 2 {
-			t.Fatalf("expected offset 2, got %d", matches[0])
-		}
+		assert.Equal(t, 2, matches.len())
 	})
 
 	t.Run("No match", func(t *testing.T) {
@@ -126,9 +94,7 @@ func TestMatchPatternWithMask(t *testing.T) {
 			matches = sig.checkMatch(data)
 		)
 
-		if matches.len() != 0 {
-			t.Fatalf("expected 0 offsets, got %d", matches.len())
-		}
+		assert.Equal(t, 0, matches.len())
 	})
 
 	t.Run("Multiple matches", func(t *testing.T) {
@@ -137,14 +103,6 @@ func TestMatchPatternWithMask(t *testing.T) {
 			matches = sig.checkMatch(data)
 		)
 
-		if matches.len() != 2 {
-			t.Fatalf("expected 2 offsets, got %d", matches.len())
-		}
-		if matches[0] != 0 {
-			t.Fatalf("expected offset 0, got %d", matches[0])
-		}
-		if matches[1] != 5 {
-			t.Fatalf("expected offset 5, got %d", matches[1])
-		}
+		assert.Equal(t, matchOffsets{0, 5}, matches)
 	})
 }

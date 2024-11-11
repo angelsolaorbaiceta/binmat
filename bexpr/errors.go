@@ -16,17 +16,9 @@ func (e ErrMissingVarValue) Error() string {
 type ParseErrorReason string
 
 const (
-	ParseErrInvalidAppend    ParseErrorReason = "invalid append attempt"
-	ParseErrInvalidVarName   ParseErrorReason = "invalid variable name"
-	ParseErrLogicError       ParseErrorReason = "called the parsing logic incorrectly"
-	ParseErrContigVars       ParseErrorReason = "found two contiguous variables"
-	ParseErrUnaryNoLHS       ParseErrorReason = "unary operations don't have a left-hand-side operand"
-	ParseErrBinaryAfterUnary ParseErrorReason = "unary operations can't act upon binary conditions"
-	ParseErrContigBinary     ParseErrorReason = "found two contiguous binary conditions"
-	ParseErrMissingLHSVar    ParseErrorReason = "missing left-hand-side operand for condition"
-	ParseErrExtraTrailVar    ParseErrorReason = "extra trailing variable"
-	ParseErrIncompleteExpr   ParseErrorReason = "incomplete binary operation"
-	ParseErrLHSOnUnary       ParseErrorReason = "unary operation doesn't expect a LHS"
+	ParseErrInvalidAppend  ParseErrorReason = "invalid append attempt"
+	ParseErrInvalidVarName ParseErrorReason = "invalid variable name"
+	ParseErrIncompleteExpr ParseErrorReason = "incomplete binary operation"
 )
 
 // ErrConditionParse is returned when a condition expression can't be parsed due
