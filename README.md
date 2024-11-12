@@ -18,8 +18,8 @@ Here's an example of a signature:
 name: example signature
 description: a signature for demonstration purposes
 patterns:
-  a: { 74 fc ff ff c6 05 19 45 }
-  b: { 51 67 ?? ?? 44 }
+  a: '{ 74 fc ff ff c6 05 19 45 }'
+  b: '{ 51 67 ?? ?? 44 }'
   c: this is a string
 condition: a AND (b OR c)
 ```

@@ -14,8 +14,8 @@ import (
 type Signature struct {
 	Name        string
 	Description string
-	patterns    map[string]*signaturePattern
-	condition   string
+	Patterns    map[string]*SignaturePattern
+	Condition   string
 	conditionFn bexpr.Condition
 }
 
@@ -25,7 +25,7 @@ type Signature struct {
 // If any of the pattern names doesn't adhere to the convention, an error is returned.
 func Make(
 	name, description string,
-	patterns map[string]*signaturePattern,
+	patterns map[string]*SignaturePattern,
 	condition string,
 ) (Signature, *ErrSignature) {
 	var signature Signature
@@ -58,11 +58,10 @@ func Make(
 		return signature, &ErrSignature{reason: ErrSigMissingPattern, cause: err}
 	}
 
-	// TODO: validate that all names in the condition are in the patterns.
 	signature.Name = name
 	signature.Description = description
-	signature.patterns = patterns
-	signature.condition = condition
+	signature.Patterns = patterns
+	signature.Condition = condition
 	signature.conditionFn = conditionFn
 
 	return signature, nil
@@ -79,8 +78,8 @@ func (s Signature) CheckMatch(data []byte) *SigMatches {
 		matches matchOffsets
 	})
 
-	for name, pattern := range s.patterns {
-		go func(name string, pattern *signaturePattern) {
+	for name, pattern := range s.Patterns {
+		go func(name string, pattern *SignaturePattern) {
 			ch <- struct {
 				name    string
 				matches matchOffsets
@@ -95,13 +94,14 @@ func (s Signature) CheckMatch(data []byte) *SigMatches {
 		matchOffs = make(map[string]matchOffsets)
 		matchVars = make(map[string]bool)
 	)
-	for range s.patterns {
+	for range s.Patterns {
 		match := <-ch
 		matchOffs[match.name] = match.matches
 		matchVars[match.name] = match.matches.isMatch()
 	}
 
-	// TODO: handle error
+	// All the variables names (patterns) in the condition have been checked to
+	// be present in the patterns map. No error should be returned here.
 	isMatch, _ := s.conditionFn(matchVars)
 
 	return &SigMatches{

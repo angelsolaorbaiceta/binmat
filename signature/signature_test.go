@@ -7,7 +7,7 @@ import (
 )
 
 func TestCreateSignature(t *testing.T) {
-	patterns := map[string]*signaturePattern{
+	patterns := map[string]*SignaturePattern{
 		"a": nil,
 		"b": nil,
 	}
@@ -18,8 +18,8 @@ func TestCreateSignature(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, "name", sig.Name)
 		assert.Equal(t, "description", sig.Description)
-		assert.Equal(t, patterns, sig.patterns)
-		assert.Equal(t, "a AND b", sig.condition)
+		assert.Equal(t, patterns, sig.Patterns)
+		assert.Equal(t, "a AND b", sig.Condition)
 
 		vars := map[string]bool{
 			"a": true,
@@ -45,7 +45,7 @@ func TestCreateSignature(t *testing.T) {
 	})
 
 	t.Run("Can't create signature with empty patterns map", func(t *testing.T) {
-		_, err := Make("name", "description", map[string]*signaturePattern{}, "a AND b")
+		_, err := Make("name", "description", map[string]*SignaturePattern{}, "a AND b")
 
 		assert.NotNil(t, err)
 		assert.Equal(t, ErrSigEmptyPatterns, err.reason)
@@ -89,12 +89,12 @@ func TestSignature(t *testing.T) {
 	}
 
 	// Pattern a and b are present, but c is not
-	patterns := map[string]*signaturePattern{
+	patterns := map[string]*SignaturePattern{
 		// Pattern a is found at offsets 4 and 13
-		"a": makePattern([]byte{0x01, 0x02, 0x03}),
+		"a": MakePattern([]byte{0x01, 0x02, 0x03}),
 		// Pattern b is found at offset 6
-		"b": makePattern([]byte{0x03, 0x02, 0x01}),
-		"c": makePattern([]byte{0x44, 0x55, 0x66}),
+		"b": MakePattern([]byte{0x03, 0x02, 0x01}),
+		"c": MakePattern([]byte{0x44, 0x55, 0x66}),
 	}
 
 	t.Run("no match", func(t *testing.T) {

@@ -18,29 +18,29 @@ func (m matchOffsets) isMatch() bool {
 	return m.len() > 0
 }
 
-// A signaturePattern is a single stream of bytes that files are matched against.
-type signaturePattern struct {
+// A SignaturePattern is a single stream of bytes that files are matched against.
+type SignaturePattern struct {
 	pattern []byte
 	mask    []byte
 	// maskedPattern is the pattern with the mask applied.
 	maskedPattern []byte
 }
 
-// length returns the length of the pattern and mask.
-func (s *signaturePattern) length() int {
+// Length returns the Length of the pattern and mask.
+func (s *SignaturePattern) Length() int {
 	return len(s.pattern)
 }
 
-func makePattern(pattern []byte) *signaturePattern {
+func MakePattern(pattern []byte) *SignaturePattern {
 	mask := make([]byte, len(pattern))
 	for i := range mask {
 		mask[i] = matchByte
 	}
 
-	return makePatternWithMask(pattern, mask)
+	return MakePatternWithMask(pattern, mask)
 }
 
-func makePatternWithMask(pattern, mask []byte) *signaturePattern {
+func MakePatternWithMask(pattern, mask []byte) *SignaturePattern {
 	if len(pattern) != len(mask) {
 		panic("pattern and mask length mismatch")
 	}
@@ -50,7 +50,7 @@ func makePatternWithMask(pattern, mask []byte) *signaturePattern {
 		maskedPattern[i] = pattern[i] & mask[i]
 	}
 
-	return &signaturePattern{
+	return &SignaturePattern{
 		pattern:       pattern,
 		mask:          mask,
 		maskedPattern: maskedPattern,
@@ -62,7 +62,7 @@ func makePatternWithMask(pattern, mask []byte) *signaturePattern {
 //
 // The function expects the full file contents in a byte slice, as binaries themselves
 // are usually small enough to fit in memory.
-func (s *signaturePattern) checkMatch(data []byte) matchOffsets {
+func (s *SignaturePattern) checkMatch(data []byte) matchOffsets {
 	var (
 		offsets     []int
 		fileByte    byte
@@ -72,7 +72,7 @@ func (s *signaturePattern) checkMatch(data []byte) matchOffsets {
 		maskFirstByte    = s.mask[0]
 	)
 
-	for i := 0; i < len(data)-s.length(); i++ {
+	for i := 0; i < len(data)-s.Length(); i++ {
 		fileByte = data[i] & maskFirstByte
 
 		if fileByte != patternFirstByte {
@@ -81,7 +81,7 @@ func (s *signaturePattern) checkMatch(data []byte) matchOffsets {
 
 		// The byte at i matches the first byte of the pattern.
 		// Check if the rest of the pattern matches.
-		for j := 1; j < s.length(); j++ {
+		for j := 1; j < s.Length(); j++ {
 			fileByte = data[i+j] & s.mask[j]
 			patternByte = s.maskedPattern[j]
 
@@ -89,7 +89,7 @@ func (s *signaturePattern) checkMatch(data []byte) matchOffsets {
 				break
 			}
 
-			if j == s.length()-1 {
+			if j == s.Length()-1 {
 				offsets = append(offsets, i)
 			}
 		}
