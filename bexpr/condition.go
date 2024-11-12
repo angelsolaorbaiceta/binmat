@@ -118,7 +118,7 @@ outerLoop:
 		default:
 			// Check if token is a valid variable name
 			// Invalid variable names directly trigger an error, as they are unrecoverable
-			if isValidVarName(token) {
+			if IsValidVarName(token) {
 				expr, err = appendToCondition(expr, &varCondition{varName: token})
 				if err != nil {
 					return nil, err.toParseErr(iter.condition)
