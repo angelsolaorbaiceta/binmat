@@ -6,6 +6,73 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestCreateSignature(t *testing.T) {
+	patterns := map[string]*signaturePattern{
+		"a": nil,
+		"b": nil,
+	}
+
+	t.Run("Create signature", func(t *testing.T) {
+		sig, err := Make("name", "description", patterns, "a AND b")
+
+		assert.Nil(t, err)
+		assert.Equal(t, "name", sig.Name)
+		assert.Equal(t, "description", sig.Description)
+		assert.Equal(t, patterns, sig.patterns)
+		assert.Equal(t, "a AND b", sig.condition)
+
+		vars := map[string]bool{
+			"a": true,
+			"b": true,
+		}
+		result, _ := sig.conditionFn(vars)
+
+		assert.True(t, result)
+	})
+
+	t.Run("Can't create signature with empty name", func(t *testing.T) {
+		_, err := Make("", "description", patterns, "a AND b")
+
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrSigEmptyName, err.reason)
+	})
+
+	t.Run("Can't create signature with nil patterns map", func(t *testing.T) {
+		_, err := Make("name", "description", nil, "a AND b")
+
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrSigEmptyPatterns, err.reason)
+	})
+
+	t.Run("Can't create signature with empty patterns map", func(t *testing.T) {
+		_, err := Make("name", "description", map[string]*signaturePattern{}, "a AND b")
+
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrSigEmptyPatterns, err.reason)
+	})
+
+	t.Run("Can't create signature with empty condition", func(t *testing.T) {
+		_, err := Make("name", "description", patterns, "")
+
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrSigWrongCondition, err.reason)
+	})
+
+	t.Run("Can't create signature with a non-parsable condition", func(t *testing.T) {
+		_, err := Make("name", "description", patterns, "a AND OR b")
+
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrSigWrongCondition, err.reason)
+	})
+
+	t.Run("Can't create signature with a condition that contains variables not in the patterns", func(t *testing.T) {
+		_, err := Make("name", "description", patterns, "a AND (b OR c)")
+
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrSigMissingPattern, err.reason)
+	})
+}
+
 func TestSignature(t *testing.T) {
 	// Simulates the bytes in a binary file. The signatures will be run against
 	// these bytes looking for matches.

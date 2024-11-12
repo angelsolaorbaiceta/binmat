@@ -1,11 +1,16 @@
 package signature
 
-import "github.com/angelsolaorbaiceta/binmat/bexpr"
+import (
+	"strings"
+
+	"github.com/angelsolaorbaiceta/binmat/bexpr"
+)
 
 // A Signature is a pattern that can be matched in a file.
 // A Signature is defined by a name, a description, a pattern, and a mask.
 // The pattern is the sequence of bytes that must be matched.
-// The mask is applied to the pattern to define which bytes must be matched, and which can be ignored.
+// The mask is applied to the pattern to define which bytes must be matched, and
+// which can be ignored.
 type Signature struct {
 	Name        string
 	Description string
@@ -17,29 +22,50 @@ type Signature struct {
 // Make creates a new Signature with the given name, description, patterns,
 // and condition.
 // If the condition can't be successfully parsed, an error is returned.
+// If any of the pattern names doesn't adhere to the convention, an error is returned.
 func Make(
 	name, description string,
 	patterns map[string]*signaturePattern,
 	condition string,
-) (*Signature, error) {
+) (Signature, *ErrSignature) {
+	var signature Signature
+
+	if len(strings.TrimSpace(name)) == 0 {
+		return signature, &ErrSignature{reason: ErrSigEmptyName}
+	}
+
+	if len(patterns) == 0 {
+		return signature, &ErrSignature{reason: ErrSigEmptyPatterns}
+	}
+
+	if len(strings.TrimSpace(condition)) == 0 {
+		return signature, &ErrSignature{reason: ErrSigWrongCondition}
+	}
+
 	conditionFn, err := bexpr.ParseCondition(condition)
 	if err != nil {
-		// TODO: use a signature domain error
-		return nil, err
+		return signature, &ErrSignature{reason: ErrSigWrongCondition, cause: err}
 	}
-	// TODO: validate that all names in the condition are in the patterns.
-	return &Signature{
-		Name:        name,
-		Description: description,
-		patterns:    patterns,
-		condition:   condition,
-		conditionFn: conditionFn,
-	}, nil
-}
 
-// length returns the number of patterns in the signature.
-func (s *Signature) length() int {
-	return len(s.patterns)
+	// Create a map where all pattern names are assigned "true" to test if the
+	// conditionFn has all the variables it needs.
+	varsMap := make(map[string]bool)
+	for name := range patterns {
+		varsMap[name] = true
+	}
+
+	if _, err := conditionFn(varsMap); err != nil {
+		return signature, &ErrSignature{reason: ErrSigMissingPattern, cause: err}
+	}
+
+	// TODO: validate that all names in the condition are in the patterns.
+	signature.Name = name
+	signature.Description = description
+	signature.patterns = patterns
+	signature.condition = condition
+	signature.conditionFn = conditionFn
+
+	return signature, nil
 }
 
 // CheckMatch reads the file from the byte slice and checks each of the patterns
@@ -47,7 +73,7 @@ func (s *Signature) length() int {
 //
 // The function expects the full file contents in a byte slice, as binaries themselves
 // are usually small enough to fit in memory.
-func (s *Signature) CheckMatch(data []byte) *SigMatches {
+func (s Signature) CheckMatch(data []byte) *SigMatches {
 	ch := make(chan struct {
 		name    string
 		matches matchOffsets
@@ -80,7 +106,7 @@ func (s *Signature) CheckMatch(data []byte) *SigMatches {
 
 	return &SigMatches{
 		IsMatch:   isMatch,
-		Signature: s,
+		Signature: &s,
 		Offsets:   matchOffs,
 	}
 }
