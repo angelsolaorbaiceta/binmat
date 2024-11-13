@@ -28,8 +28,9 @@ func TestIOSignature(t *testing.T) {
 			Patterns: map[string]string{
 				"a": "{ 74 fc ff ff c6 05 19 45 }",
 				"b": " { 22 33 ?? 55 aa bb } ",
+				"c": "very wow, much cool",
 			},
-			Condition: "a AND b",
+			Condition: "a AND (b AND c)",
 		}
 
 		assert.Nil(t, err)
@@ -45,15 +46,21 @@ func TestIOSignature(t *testing.T) {
 		assert.Equal(t, "This signature is used in tests", sig.Description)
 
 		wantPatterns := map[string]*signature.SignaturePattern{
-			"a": signature.MakePattern([]byte{0x74, 0xfc, 0xff, 0xff, 0xc6, 0x05, 0x19, 0x45}),
+			"a": signature.MakePattern(
+				[]byte{0x74, 0xfc, 0xff, 0xff, 0xc6, 0x05, 0x19, 0x45},
+			),
 			"b": signature.MakePatternWithMask(
 				[]byte{0x22, 0x33, 0x00, 0x55, 0xaa, 0xbb},
 				[]byte{0xff, 0xff, 0x00, 0xff, 0xff, 0xff},
 			),
+			"c": signature.MakePattern(
+				[]byte{0x76, 0x65, 0x72, 0x79, 0x20, 0x77, 0x6f, 0x77, 0x2c, 0x20, 0x6d,
+					0x75, 0x63, 0x68, 0x20, 0x63, 0x6f, 0x6f, 0x6c},
+			),
 		}
 		assert.Equal(t, wantPatterns, sig.Patterns)
 
-		assert.Equal(t, sig.Condition, "a AND b")
+		assert.Equal(t, "a AND (b AND c)", sig.Condition)
 	})
 
 	t.Run("to domain fails if any field in the string doesn't have two characters", func(t *testing.T) {

@@ -3,4 +3,5 @@ description: This signature is used in tests
 patterns:
   a: '{ 74 fc ff ff c6 05 19 45 }'
   b: ' { 22 33 ?? 55 aa bb } '
-condition: a AND b
+  c: very wow, much cool
+condition: a AND (b AND c)

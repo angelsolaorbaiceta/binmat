@@ -24,6 +24,30 @@ patterns:
 condition: a AND (b OR c)
 ```
 
-Patterns are either sequences of hexadecimal numbers (bytes) or strings.
-In the case of hexadecimal numbers, they appear enclosed between curly brackets.
-Hexadecimal sequences may contain two question marks (`??`) that match any byte at that position.
+Patterns are either sequences of hexadecimal numbers (byte sequences) or strings.
+
+**Byte sequences**.
+Byte sequences are represented by hexadecimal numbers.
+They appear enclosed between curly brackets, as a string in the yaml file.
+For example:
+
+```
+a: '{ 74 fc ff ff c6 05 19 45 }'
+```
+
+Byte sequences may contain two question marks (`??`) that match any byte at that position.
+Here's an example:
+
+```
+b: '{ 51 67 ?? ?? 44 }'
+```
+
+The previous pattern matches any sequence of bytes that starts with `0x51 0x67`, then has two arbitrary bytes, and last, a `0x44` byte.
+Examples of byte sequences that would be matched:
+
+- `0x51 0x67 0xab 0xcd 0x44`
+- `0x51 0x67 0x11 0x22 0x44`
+- `0x51 0x67 0x33 0xff 0x44`
+
+**Strings**.
+Only ASCII strings are supported at the moment.

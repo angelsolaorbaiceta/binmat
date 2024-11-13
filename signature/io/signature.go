@@ -33,6 +33,9 @@ func ReadFromYaml(r io.Reader) (Signature, error) {
 }
 
 // ToDomain maps the signature to a domain instance of the signature.
+// The returned error can be:
+//   - ErrSignature: if the error happens in the creation of the signature
+//   - error: if there's an error parsing a pattern
 func (s Signature) ToDomain() (signature.Signature, error) {
 	var (
 		patterns = make(map[string]*signature.SignaturePattern)
@@ -50,6 +53,7 @@ func (s Signature) ToDomain() (signature.Signature, error) {
 }
 
 // patternToDomain parses a given pattern into a domain SignaturePattern.
+// Patterns can be binary sequences or strings.
 // Returns an error if the pattern can't be parsed.
 func patternToDomain(pattern string) (*signature.SignaturePattern, error) {
 	if bytePatternRe.MatchString(pattern) {
@@ -81,5 +85,6 @@ func patternToDomain(pattern string) (*signature.SignaturePattern, error) {
 		return signature.MakePatternWithMask(bytePattern, byteMask), nil
 	}
 
-	return nil, fmt.Errorf("unknown type of pattern: '%s'", pattern)
+	// The sequence appears to be a string. Convert to its ascii bytes.
+	return signature.MakePattern([]byte(pattern)), nil
 }
