@@ -88,3 +88,22 @@ func patternToDomain(pattern string) (*signature.SignaturePattern, error) {
 	// The sequence appears to be a string. Convert to its ascii bytes.
 	return signature.MakePattern([]byte(pattern)), nil
 }
+
+func signaturesToDomain(sigs []Signature) ([]signature.Signature, error) {
+	var (
+		domainSigs = make([]signature.Signature, len(sigs))
+		domainSig  signature.Signature
+		err        error
+	)
+
+	for i, sig := range sigs {
+		domainSig, err = sig.ToDomain()
+		if err != nil {
+			return domainSigs, err
+		}
+
+		domainSigs[i] = domainSig
+	}
+
+	return domainSigs, nil
+}

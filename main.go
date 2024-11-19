@@ -3,33 +3,65 @@ package main
 import (
 	"fmt"
 	"os"
-)
+	"path/filepath"
 
-// TODO: Read from yaml files in the ./config/binmat/sigs directory
-// var signatures = signature.Signatures{
-// 	signature.Make("ELF", "Executable and Linkable Format", []byte{0x7f, 0x45, 0x4c, 0x46}),
-// 	signature.Make("ls", "ls command", []byte{0x74, 0xfc, 0xff, 0xff, 0xc6, 0x05, 0x19, 0x45}),
-// }
+	"github.com/angelsolaorbaiceta/binmat/signature"
+	sigio "github.com/angelsolaorbaiceta/binmat/signature/io"
+)
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Usage: %s <file path>\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s <file|directory>\n", os.Args[0])
 		os.Exit(1)
 	}
 
-	// filePath := os.Args[1]
-	// fmt.Fprintf(os.Stderr, "Checking matches in file: %s...\n", filePath)
+	homePath, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error getting the user's home path: %s\n", err)
+		os.Exit(1)
+	}
 
-	// // /bin/ls
-	// // 00008100: 74fc ffff c605 1945 0000 01c6 050e 4500
+	sigsPath := filepath.Join(homePath, ".config/binmat")
+	sigs, err := sigio.LoadSignatures(sigsPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error reading the .yaml signatures from '%s': %s\n", sigsPath, err)
+		os.Exit(1)
+	}
 
-	// matches, err := signatures.Check(filePath)
-	// if err != nil {
-	// 	fmt.Fprintf(os.Stderr, "Error checking signatures: %s\n", err)
-	// 	os.Exit(1)
-	// }
+	matches := searchMatches(sigs)
+	fmt.Printf("Scanned %d files.\n", len(matches))
+	for _, match := range matches {
+		if match.IsMatch {
+			match.Write(os.Stdout)
+		}
+	}
+}
 
-	// for _, match := range matches {
-	// 	match.Write(os.Stdout, filePath)
-	// }
+func searchMatches(sigs signature.Signatures) []signature.SigMatch {
+	var (
+		path    = os.Args[1]
+		isDir   bool
+		matches []signature.SigMatch
+		err     error
+	)
+
+	if stat, err := os.Stat(path); err != nil {
+		fmt.Fprintf(os.Stderr, "Can't get '%s' file info: %s\n", path, err)
+		os.Exit(1)
+	} else {
+		isDir = stat.IsDir()
+	}
+
+	if isDir {
+		matches, err = sigs.CheckDir(path)
+	} else {
+		matches, err = sigs.Check(path)
+	}
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Can't check for matches: %s\n", err)
+		os.Exit(1)
+	}
+
+	return matches
 }

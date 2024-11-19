@@ -34,42 +34,42 @@ func TestCreateSignature(t *testing.T) {
 		_, err := Make("", "description", patterns, "a AND b")
 
 		assert.NotNil(t, err)
-		assert.Equal(t, ErrSigEmptyName, err.reason)
+		assert.Equal(t, ErrSigEmptyName, err.(ErrSignature).reason)
 	})
 
 	t.Run("Can't create signature with nil patterns map", func(t *testing.T) {
 		_, err := Make("name", "description", nil, "a AND b")
 
 		assert.NotNil(t, err)
-		assert.Equal(t, ErrSigEmptyPatterns, err.reason)
+		assert.Equal(t, ErrSigEmptyPatterns, err.(ErrSignature).reason)
 	})
 
 	t.Run("Can't create signature with empty patterns map", func(t *testing.T) {
 		_, err := Make("name", "description", map[string]*SignaturePattern{}, "a AND b")
 
 		assert.NotNil(t, err)
-		assert.Equal(t, ErrSigEmptyPatterns, err.reason)
+		assert.Equal(t, ErrSigEmptyPatterns, err.(ErrSignature).reason)
 	})
 
 	t.Run("Can't create signature with empty condition", func(t *testing.T) {
 		_, err := Make("name", "description", patterns, "")
 
 		assert.NotNil(t, err)
-		assert.Equal(t, ErrSigWrongCondition, err.reason)
+		assert.Equal(t, ErrSigWrongCondition, err.(ErrSignature).reason)
 	})
 
 	t.Run("Can't create signature with a non-parsable condition", func(t *testing.T) {
 		_, err := Make("name", "description", patterns, "a AND OR b")
 
 		assert.NotNil(t, err)
-		assert.Equal(t, ErrSigWrongCondition, err.reason)
+		assert.Equal(t, ErrSigWrongCondition, err.(ErrSignature).reason)
 	})
 
 	t.Run("Can't create signature with a condition that contains variables not in the patterns", func(t *testing.T) {
 		_, err := Make("name", "description", patterns, "a AND (b OR c)")
 
 		assert.NotNil(t, err)
-		assert.Equal(t, ErrSigMissingPattern, err.reason)
+		assert.Equal(t, ErrSigMissingPattern, err.(ErrSignature).reason)
 	})
 }
 

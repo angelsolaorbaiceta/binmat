@@ -27,24 +27,24 @@ func Make(
 	name, description string,
 	patterns map[string]*SignaturePattern,
 	condition string,
-) (Signature, *ErrSignature) {
+) (Signature, error) {
 	var signature Signature
 
 	if len(strings.TrimSpace(name)) == 0 {
-		return signature, &ErrSignature{reason: ErrSigEmptyName}
+		return signature, ErrSignature{reason: ErrSigEmptyName}
 	}
 
 	if len(patterns) == 0 {
-		return signature, &ErrSignature{reason: ErrSigEmptyPatterns}
+		return signature, ErrSignature{reason: ErrSigEmptyPatterns}
 	}
 
 	if len(strings.TrimSpace(condition)) == 0 {
-		return signature, &ErrSignature{reason: ErrSigWrongCondition}
+		return signature, ErrSignature{reason: ErrSigWrongCondition}
 	}
 
 	conditionFn, err := bexpr.ParseCondition(condition)
 	if err != nil {
-		return signature, &ErrSignature{reason: ErrSigWrongCondition, cause: err}
+		return signature, ErrSignature{reason: ErrSigWrongCondition, cause: err}
 	}
 
 	// Create a map where all pattern names are assigned "true" to test if the
@@ -55,7 +55,7 @@ func Make(
 	}
 
 	if _, err := conditionFn(varsMap); err != nil {
-		return signature, &ErrSignature{reason: ErrSigMissingPattern, cause: err}
+		return signature, ErrSignature{reason: ErrSigMissingPattern, cause: err}
 	}
 
 	signature.Name = name
@@ -72,7 +72,7 @@ func Make(
 //
 // The function expects the full file contents in a byte slice, as binaries themselves
 // are usually small enough to fit in memory.
-func (s Signature) CheckMatch(data []byte) *SigMatches {
+func (s Signature) CheckMatch(data []byte) SigMatch {
 	ch := make(chan struct {
 		name    string
 		matches matchOffsets
@@ -104,7 +104,7 @@ func (s Signature) CheckMatch(data []byte) *SigMatches {
 	// be present in the patterns map. No error should be returned here.
 	isMatch, _ := s.conditionFn(matchVars)
 
-	return &SigMatches{
+	return SigMatch{
 		IsMatch:   isMatch,
 		Signature: &s,
 		Offsets:   matchOffs,

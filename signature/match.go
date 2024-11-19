@@ -5,19 +5,25 @@ import (
 	"io"
 )
 
-type SigMatches struct {
+type SigMatchMeta struct {
+	FilePath string
+}
+
+// A SigMatch is the result of attempting to match a file against a signature.
+type SigMatch struct {
+	Meta      SigMatchMeta
 	Signature *Signature
 	IsMatch   bool
 	Offsets   map[string]matchOffsets
 }
 
-func (sm *SigMatches) Len() int {
+func (sm *SigMatch) Len() int {
 	return len(sm.Offsets)
 }
 
-func (sm *SigMatches) Write(w io.StringWriter, fileName string) {
+func (sm *SigMatch) Write(w io.StringWriter) {
 	w.WriteString("================================================================================\n")
-	w.WriteString(fmt.Sprintf("File:         %s\n", fileName))
+	w.WriteString(fmt.Sprintf("File:         %s\n", sm.Meta.FilePath))
 	w.WriteString(fmt.Sprintf("Signature:    %s\n", sm.Signature.Name))
 	w.WriteString(fmt.Sprintf("Description:  %s\n", sm.Signature.Description))
 	w.WriteString("================================================================================\n")
@@ -28,14 +34,5 @@ func (sm *SigMatches) Write(w io.StringWriter, fileName string) {
 	}
 
 	w.WriteString(fmt.Sprintf("%d Matches found at offsets: \n", sm.Len()))
-	// for i, offset := range sm.Offsets {
-	// 	w.WriteString(
-	// 		fmt.Sprintf(
-	// 			"\t> [%d] offset=%d (dd if=%s bs=1 skip=%d count=%d 2>/dev/null | hexdump -C)\n",
-	// 			i+1, offset, fileName, offset, sm.Signature.length(),
-	// 		),
-	// 	)
-	// }
-
 	w.WriteString("\n")
 }

@@ -1,0 +1,5 @@
+name: Macromedia Flash 5.0
+description: Macromedia flash 5.0 main exe binary
+patterns:
+  a: Flash is low on memory. Some windows may be drawn as gray.
+condition: a
