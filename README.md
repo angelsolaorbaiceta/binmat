@@ -1,5 +1,7 @@
 # Binary Matcher
 
+A binary signature matcher written in Go.
+
 ## Usage
 
 Install the binary:
