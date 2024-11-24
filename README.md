@@ -1,7 +1,32 @@
 # Binary Matcher
 
+## Usage
+
+Install the binary:
+
+```bash
+$ go install https://github.com/angelsolaorbaiceta/binmat@latest
+```
+
+Create your signature _.yaml_ files (see next section) and place them inside your _$HOME/.config/binmat_ directory.
+Every time you run the _binmat_ binary, those signature files are loaded into the program.
+
+Scan a single binary file for matches against your signature files:
+
+```bash
+$ binmat path/to/bin
+```
+
+Or recursively check every binary inside a given folder against your signature files:
+
+```bash
+$ binmat path/to/directory
+```
+
+## About
+
 A CLI to match binary files using signatures.
-A signature is defined in a _.yaml_ file, and contains the following fields:
+A signature is defined in a _.yaml_ file, inside your _$HOME/.config/binmat_ directory, and contains the following fields:
 
 - `name`: The name given to the signature.
 - `description`: An optional description of what the signature matches.
@@ -51,3 +76,5 @@ Examples of byte sequences that would be matched:
 
 **Strings**.
 Only ASCII strings are supported at the moment.
+The string is converted to its ASCII byte sequence, and thus treated exactly as any other byte sequence.
+
