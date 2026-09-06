@@ -28,40 +28,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	matches := searchMatches(sigs)
+	matches := signature.SearchMatches(sigs, os.Args[1])
 	fmt.Printf("Scanned %d files.\n", len(matches))
 	for _, match := range matches {
 		if match.IsMatch {
 			match.Write(os.Stdout)
 		}
 	}
-}
-
-func searchMatches(sigs signature.Signatures) []signature.SigMatch {
-	var (
-		path    = os.Args[1]
-		isDir   bool
-		matches []signature.SigMatch
-		err     error
-	)
-
-	if stat, err := os.Stat(path); err != nil {
-		fmt.Fprintf(os.Stderr, "Can't get '%s' file info: %s\n", path, err)
-		os.Exit(1)
-	} else {
-		isDir = stat.IsDir()
-	}
-
-	if isDir {
-		matches, err = sigs.CheckDir(path)
-	} else {
-		matches, err = sigs.Check(path)
-	}
-
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Can't check for matches: %s\n", err)
-		os.Exit(1)
-	}
-
-	return matches
 }

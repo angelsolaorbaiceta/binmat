@@ -3,6 +3,7 @@ package signature
 import (
 	"fmt"
 	"io"
+	"os"
 )
 
 type SigMatchMeta struct {
@@ -35,4 +36,32 @@ func (sm *SigMatch) Write(w io.StringWriter) {
 
 	w.WriteString(fmt.Sprintf("%d Matches found at offsets: \n", sm.Len()))
 	w.WriteString("\n")
+}
+
+func SearchMatches(sigs Signatures, path string) []SigMatch {
+	var (
+		isDir   bool
+		matches []SigMatch
+		err     error
+	)
+
+	if stat, err := os.Stat(path); err != nil {
+		fmt.Fprintf(os.Stderr, "Can't get '%s' file info: %s\n", path, err)
+		os.Exit(1)
+	} else {
+		isDir = stat.IsDir()
+	}
+
+	if isDir {
+		matches, err = sigs.CheckDir(path)
+	} else {
+		matches, err = sigs.Check(path)
+	}
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Can't check for matches: %s\n", err)
+		os.Exit(1)
+	}
+
+	return matches
 }

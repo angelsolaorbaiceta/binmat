@@ -8,15 +8,20 @@ help:  ## Display this help
 .PHONY: test
 test: ## Run all the tests
 	go test -v ./...
-	
+
 .PHONY: build
 build: ## Build the binary
 	go build -o bin/ ./...
-	
+
 .PHONY: run
 run: ## Run the binary
 	go run main.go
-	
+
 .PHONY: install
 install: ## Install the binary in $GOPATH/bin
 	go install .
+
+.PHONY: test_sig
+test_sig: ## Create a signature that matches the ls binary
+	mkdir -p ~/.config/binmat
+	cp examples/signatures/ls.yaml ~/.config/binmat
