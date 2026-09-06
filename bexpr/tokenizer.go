@@ -15,5 +15,10 @@ const (
 var tokensRe = regexp.MustCompile(`[a-z0-9_]+|AND|OR|NOT|\(|\)`)
 
 func tokenize(condition string) []string {
-	return tokensRe.FindAllString(condition, -1)
+	tokens := make([]string, 0)
+	for _, token := range tokensRe.FindAllString(condition, -1) {
+		tokens = append(tokens, token)
+	}
+
+	return tokens
 }

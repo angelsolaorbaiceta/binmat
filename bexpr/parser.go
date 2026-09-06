@@ -24,6 +24,35 @@ import (
 //   - ErrMissingVarValue: when a variable in the expression isn't provided in the argument.
 type Condition func(map[string]bool) (bool, *ErrMissingVarValue)
 
+// parser holds the state while parsing a condition.
+type parser struct {
+	tokens []string
+	idx    int
+	cond   string // original condition for error messages
+}
+
+func parserFromCond(condition string) *parser {
+	tokens := tokenize(condition)
+	return &parser{
+		tokens: tokens,
+		idx:    0,
+		cond:   condition,
+	}
+}
+
+func (p *parser) hasNext() bool {
+	return p.idx < len(p.tokens)
+}
+
+func (p *parser) next() string {
+	if !p.hasNext() {
+		panic("unexpected end of tokens")
+	}
+	s := p.tokens[p.idx]
+	p.idx++
+	return s
+}
+
 // ParseCondition parses a condition string and returns a condition function.
 //
 // A condition is made of variable names and operators.
@@ -51,8 +80,8 @@ type Condition func(map[string]bool) (bool, *ErrMissingVarValue)
 //
 // If the expression can't be parsed, an ErrConditionParse error is returned.
 func ParseCondition(condition string) (Condition, *ErrConditionParse) {
-	iter := makeTokenIter(condition)
-	expr, err := parse(iter)
+	p := parserFromCond(condition)
+	expr, err := parse(p)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +97,7 @@ func ParseCondition(condition string) (Condition, *ErrConditionParse) {
 	return cond, nil
 }
 
-func parse(iter *tokenIter) (conditionExpr, *ErrConditionParse) {
+func parse(p *parser) (conditionExpr, *ErrConditionParse) {
 	var (
 		token string
 		expr  conditionExpr
@@ -76,13 +105,13 @@ func parse(iter *tokenIter) (conditionExpr, *ErrConditionParse) {
 	)
 
 outerLoop:
-	for iter.hasNext() {
-		switch token = iter.next(); token {
+	for p.hasNext() {
+		switch token = p.next(); token {
 		case "":
 			continue
 
 		case tokenGroupStart:
-			groupExpr, parseErr := parse(iter)
+			groupExpr, parseErr := parse(p)
 			if parseErr != nil {
 				return nil, parseErr
 			}
@@ -90,7 +119,7 @@ outerLoop:
 			group := &groupCondition{expr: groupExpr}
 			expr, err = appendToCondition(expr, group)
 			if err != nil {
-				return nil, err.toParseErr(iter.condition)
+				return nil, err.toParseErr(p.cond)
 			}
 
 		case tokenGroupEnd:
@@ -100,19 +129,19 @@ outerLoop:
 		case tokenNot:
 			expr, err = appendToCondition(expr, &notCondition{})
 			if err != nil {
-				return nil, err.toParseErr(iter.condition)
+				return nil, err.toParseErr(p.cond)
 			}
 
 		case tokenAnd:
 			expr, err = appendToCondition(expr, &andCondition{})
 			if err != nil {
-				return nil, err.toParseErr(iter.condition)
+				return nil, err.toParseErr(p.cond)
 			}
 
 		case tokenOr:
 			expr, err = appendToCondition(expr, &orCondition{})
 			if err != nil {
-				return nil, err.toParseErr(iter.condition)
+				return nil, err.toParseErr(p.cond)
 			}
 
 		default:
@@ -121,11 +150,11 @@ outerLoop:
 			if IsValidVarName(token) {
 				expr, err = appendToCondition(expr, &varCondition{varName: token})
 				if err != nil {
-					return nil, err.toParseErr(iter.condition)
+					return nil, err.toParseErr(p.cond)
 				}
 			} else {
 				return nil, &ErrConditionParse{
-					OffendingCond: iter.condition,
+					OffendingCond: p.cond,
 					Reason:        ParseErrInvalidVarName,
 					Details: fmt.Sprintf(
 						"'%s' must contain between 1 and 16 lowercase letters, numbers and underscores",
@@ -138,7 +167,7 @@ outerLoop:
 
 	if !isCondComplete(expr) {
 		return nil, &ErrConditionParse{
-			OffendingCond: iter.condition,
+			OffendingCond: p.cond,
 			Reason:        ParseErrIncompleteExpr,
 			Details:       fmt.Sprintf("'%s'", expr),
 		}

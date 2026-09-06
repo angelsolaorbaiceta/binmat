@@ -1,8 +1,8 @@
 package signature
 
 const (
-	matchByte = 0xff
-	anyByte   = 0x00
+	maskMatchByte = 0xff
+	maskAnyByte   = 0x00
 )
 
 // matchOffsets is a slice of offsets where a pattern matches.
@@ -34,7 +34,7 @@ func (s *SignaturePattern) Length() int {
 func MakePattern(pattern []byte) *SignaturePattern {
 	mask := make([]byte, len(pattern))
 	for i := range mask {
-		mask[i] = matchByte
+		mask[i] = maskMatchByte
 	}
 
 	return MakePatternWithMask(pattern, mask)
