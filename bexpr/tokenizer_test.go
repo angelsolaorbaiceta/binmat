@@ -12,6 +12,7 @@ func TestTokenize(t *testing.T) {
 		cond string
 		want []string
 	}{
+		{cond: "", want: []string{}},
 		{cond: "a AND (b OR c)", want: []string{"a", "AND", "(", "b", "OR", "c", ")"}},
 		{cond: "  a   AND (  b OR c )  ", want: []string{"a", "AND", "(", "b", "OR", "c", ")"}},
 		{cond: "foo78 OR NOT bar23", want: []string{"foo78", "OR", "NOT", "bar23"}},
@@ -20,11 +21,7 @@ func TestTokenize(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("tokenize '%s'", tCase.cond),
 			func(t *testing.T) {
-				var (
-					iter = makeTokenIter(tCase.cond)
-					got  = iter.getAll()
-				)
-
+				got := tokenize(tCase.cond)
 				assert.Equal(t, tCase.want, got)
 			})
 	}
