@@ -1,6 +1,6 @@
 module github.com/angelsolaorbaiceta/binmat
 
-go 1.22
+go 1.27.1
 
 require github.com/stretchr/testify v1.9.0
 
