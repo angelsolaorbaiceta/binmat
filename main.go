@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/angelsolaorbaiceta/binmat/signature"
 	sigio "github.com/angelsolaorbaiceta/binmat/signature/io"
 )
 
@@ -28,7 +27,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	matches := signature.SearchMatches(sigs, os.Args[1])
+	matches, _ := sigs.SearchMatches(os.Args[1])
 	fmt.Printf("Scanned %d files.\n", len(matches))
 	for _, match := range matches {
 		if match.IsMatch {

@@ -2,6 +2,7 @@ package signature
 
 import (
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -116,59 +117,72 @@ func (s Signature) CheckMatch(data []byte) SigMatch {
 // Signatures is a collection of byte Signatures.
 type Signatures []Signature
 
-// Check reads the file from the byte slice and checks if the signatures match.
-// It returns all the matches found, or an error if there is a problem reading the file.
-func (s Signatures) Check(binPath string) ([]SigMatch, error) {
+// SearchMatches walks the given root:
+//   - if root is a file, it checks that file.
+//   - if root is a directory, it recursively checks every file.
+//
+// It collects all matches and returns them, along with any errors encountered.
+func (s Signatures) SearchMatches(root string) ([]SigMatch, []error) {
+	info, err := os.Stat(root)
+	if err != nil {
+		return nil, []error{err}
+	}
+
+	if !info.IsDir() {
+		matches, err := s.checkFile(root)
+		if err != nil {
+			return matches, []error{err}
+		}
+		return matches, nil
+	}
+
 	var (
-		results = make(chan SigMatch)
-		matches []SigMatch
-		match   SigMatch
+		allMatches []SigMatch
+		errs       []error
 	)
 
+	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			// WalkDir itself encountered an issue (e.g., permission denied).
+			// We record the error but continue walking the rest.
+			errs = append(errs, err)
+			return nil // return nil to keep walking
+		}
+
+		if d.IsDir() {
+			return nil // skip directories
+		}
+
+		matches, err := s.checkFile(path)
+		if err != nil {
+			errs = append(errs, err)
+			return nil // continue with the next file
+		}
+
+		allMatches = append(allMatches, matches...)
+		return nil
+	})
+
+	// If WalkDir itself returns a fatal error (e.g., root doesn't exist),
+	// we return it; otherwise we return the collected errors.
+	if err != nil && len(allMatches) == 0 && len(errs) == 0 {
+		return nil, []error{err}
+	}
+	return allMatches, errs
+}
+
+func (s Signatures) checkFile(binPath string) ([]SigMatch, error) {
 	data, err := readFileBytes(binPath)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, sig := range s {
-		go func(sig *Signature) {
-			match = sig.CheckMatch(data)
-			match.Meta = SigMatchMeta{FilePath: binPath}
-			results <- match
-		}(&sig)
-	}
-
-	for range s {
-		match := <-results
-		if match.Len() > 0 {
-			matches = append(matches, match)
-		}
+	matches := make([]SigMatch, len(s))
+	for i, sig := range s {
+		match := sig.CheckMatch(data)
+		match.Meta = SigMatchMeta{FilePath: binPath}
+		matches[i] = match
 	}
 
 	return matches, nil
-}
-
-// CheckDir checks every file inside the directory for matches against these
-// signatures.
-func (s Signatures) CheckDir(dirPath string) ([]SigMatch, error) {
-	var matches []SigMatch
-
-	err := filepath.Walk(dirPath, func(path string, info fs.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if !info.IsDir() {
-			fileMatches, err := s.Check(path)
-			if err != nil {
-				return err
-			}
-
-			matches = append(matches, fileMatches...)
-		}
-
-		return nil
-	})
-
-	return matches, err
 }
