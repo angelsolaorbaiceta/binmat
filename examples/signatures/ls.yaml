@@ -1,5 +1,10 @@
 name: ls
-description: The ls command line
+description: The ls command line utility from GNU coreutils
 patterns:
-  a: "{ 74 fc ff ff c6 05 19 45 }"
-condition: a
+  # ELF header magic bytes (present in all Linux ELF binaries)
+  elf_magic: "{ 7f 45 4c 46 }"
+  # Source file identifier - unique to ls binary in coreutils
+  source_file: "src/ls.c"
+  # GNU coreutils branding string
+  gnu_coreutils: "GNU coreutils"
+condition: elf_magic AND (source_file AND gnu_coreutils)
