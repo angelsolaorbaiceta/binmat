@@ -25,3 +25,5 @@ install: ## Install the binary in $GOPATH/bin
 test_sig: ## Create a signature that matches the ls binary
 	mkdir -p ~/.config/binmat
 	cp examples/signatures/ls.yaml ~/.config/binmat
+	cp examples/signatures/zip.yaml ~/.config/binmat
+	cp examples/signatures/generic_x86_64_prologue.yaml ~/.config/binmat

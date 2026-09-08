@@ -1,0 +1,10 @@
+name: TOO GENERIC - x86_64 function prologue
+description: >-
+  Counterexample. A common function prologue (push rbp; mov rbp, rsp; push
+  r15..r12, rbx, rax) is unique in a naive byte-window scan but appears in
+  roughly half of the macOS system binaries. Compare with zip.yaml, which
+  extends the same prologue with the function body to make it distinctive.
+patterns:
+  # push rbp; mov rbp, rsp; push r15; push r14; push r13; push r12; push rbx; push rax
+  prologue: "{ 55 48 89 e5 41 57 41 56 41 55 41 54 53 50 }"
+condition: prologue

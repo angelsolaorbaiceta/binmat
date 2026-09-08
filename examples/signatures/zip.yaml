@@ -1,0 +1,19 @@
+name: Info-ZIP zip (macOS)
+description: Apple-shipped Info-ZIP zip, universal (fat) Mach-O binary
+patterns:
+  # Universal Mach-O magic bytes (present in all fat macOS binaries)
+  fat_magic: "{ ca fe ba be }"
+  # Usage banner - unique to the zip binary
+  usage: "zip [-options] [-b path] [-t mmddyyyy] [-n suffixes] [zipfile list] [-xi list]"
+  # First x86_64 function: re-entry guard that calls exit(5).
+  # RIP-relative displacements and the call target are wildcarded so a
+  # relinked build with different addresses still matches.
+  #   55 48 89 e5 41 57 41 56 41 55 41 54 53 50   push rbp ... push rax
+  #   8b 05 ?? ?? ?? ??                            mov eax, [rip+disp32]
+  #   8d 48 01                                     lea ecx, [rax+1]
+  #   89 0d ?? ?? ?? ??                            mov [rip+disp32], ecx
+  #   85 c0 7e 0a                                  test eax, eax ; jle +10
+  #   bf 05 00 00 00                               mov edi, 5
+  #   e8 ?? ?? ?? ??                               call _exit
+  guard_fn: "{ 55 48 89 e5 41 57 41 56 41 55 41 54 53 50 8b 05 ?? ?? ?? ?? 8d 48 01 89 0d ?? ?? ?? ?? 85 c0 7e 0a bf 05 00 00 00 e8 ?? ?? ?? ?? }"
+condition: fat_magic AND (usage OR guard_fn)
