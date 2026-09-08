@@ -118,10 +118,10 @@ func TestSignature(t *testing.T) {
 		matches := matchSig.CheckMatch(fileBytes, "path/to/bin")
 
 		aOff := matches.OffsetsByPattern["a"]
-		assert.Equal(t, MatchOffsets{4, 13}, aOff)
+		assert.Equal(t, PatternMatchOffsets{4, 13}, aOff)
 
 		bOff := matches.OffsetsByPattern["b"]
-		assert.Equal(t, MatchOffsets{6}, bOff)
+		assert.Equal(t, PatternMatchOffsets{6}, bOff)
 
 		cOff := matches.OffsetsByPattern["c"]
 		assert.Nil(t, cOff)

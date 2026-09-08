@@ -12,7 +12,7 @@ type SigMatch struct {
 	// Whether the signature condition was met.
 	IsMatch bool `json:"isMatch"`
 	// The offsets at which each signature pattern was found in the file.
-	OffsetsByPattern map[string]MatchOffsets `json:"offsetsByPattern"`
+	OffsetsByPattern map[string]PatternMatchOffsets `json:"offsetsByPattern"`
 }
 
 func (sm *SigMatch) Len() int {

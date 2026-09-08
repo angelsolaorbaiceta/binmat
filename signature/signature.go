@@ -75,14 +75,14 @@ func Make(
 func (s Signature) CheckMatch(data []byte, filePath string) SigMatch {
 	ch := make(chan struct {
 		name    string
-		matches MatchOffsets
+		matches PatternMatchOffsets
 	})
 
 	for name, pattern := range s.Patterns {
 		go func(name string, pattern *SignaturePattern) {
 			ch <- struct {
 				name    string
-				matches MatchOffsets
+				matches PatternMatchOffsets
 			}{
 				name:    name,
 				matches: pattern.checkMatch(data),
@@ -91,7 +91,7 @@ func (s Signature) CheckMatch(data []byte, filePath string) SigMatch {
 	}
 
 	var (
-		matchOffs = make(map[string]MatchOffsets)
+		matchOffs = make(map[string]PatternMatchOffsets)
 		matchVars = make(map[string]bool)
 	)
 	for range s.Patterns {

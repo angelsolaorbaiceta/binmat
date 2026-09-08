@@ -5,16 +5,16 @@ const (
 	maskAnyByte   = 0x00
 )
 
-// MatchOffsets is a slice of offsets where a pattern matches.
-type MatchOffsets []int
+// PatternMatchOffsets is a slice of offsets where a pattern matches.
+type PatternMatchOffsets []int
 
 // len returns the number of offsets.
-func (m MatchOffsets) len() int {
+func (m PatternMatchOffsets) len() int {
 	return len(m)
 }
 
 // isMatch returns true if there is at least one match.
-func (m MatchOffsets) isMatch() bool {
+func (m PatternMatchOffsets) isMatch() bool {
 	return m.len() > 0
 }
 
@@ -62,7 +62,7 @@ func MakePatternWithMask(pattern, mask []byte) *SignaturePattern {
 //
 // The function expects the full file contents in a byte slice, as binaries themselves
 // are usually small enough to fit in memory.
-func (s *SignaturePattern) checkMatch(data []byte) MatchOffsets {
+func (s *SignaturePattern) checkMatch(data []byte) PatternMatchOffsets {
 	var (
 		offsets     []int
 		fileByte    byte
