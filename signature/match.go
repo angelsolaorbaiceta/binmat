@@ -21,18 +21,18 @@ func (sm *SigMatch) Len() int {
 	return len(sm.Offsets)
 }
 
-func (sm *SigMatch) Write(w io.StringWriter) {
-	w.WriteString("================================================================================\n")
-	w.WriteString(fmt.Sprintf("File:         %s\n", sm.Meta.FilePath))
-	w.WriteString(fmt.Sprintf("Signature:    %s\n", sm.Signature.Name))
-	w.WriteString(fmt.Sprintf("Description:  %s\n", sm.Signature.Description))
-	w.WriteString("================================================================================\n")
+func (sm *SigMatch) Write(w io.Writer) {
+	io.WriteString(w, "================================================================================\n")
+	io.WriteString(w, fmt.Sprintf("File:         %s\n", sm.Meta.FilePath))
+	io.WriteString(w, fmt.Sprintf("Signature:    %s\n", sm.Signature.Name))
+	io.WriteString(w, fmt.Sprintf("Description:  %s\n", sm.Signature.Description))
+	io.WriteString(w, "================================================================================\n")
 
 	if !sm.IsMatch {
-		w.WriteString("No matches found\n\n")
+		io.WriteString(w, "No matches found\n\n")
 		return
 	}
 
-	w.WriteString(fmt.Sprintf("%d Matches found at offsets: \n", sm.Len()))
-	w.WriteString("\n")
+	io.WriteString(w, fmt.Sprintf("%d Matches found at offsets: \n", sm.Len()))
+	io.WriteString(w, "\n")
 }

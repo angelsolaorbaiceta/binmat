@@ -1,37 +1,106 @@
 package main
 
 import (
+	"errors"
+	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
 	sigio "github.com/angelsolaorbaiceta/binmat/signature/io"
 )
 
+// Exit codes follow grep's convention, which is what anyone scripting a
+// scanner will assume:
+//
+//	0 - ran fine, at least one signature matched
+//	1 - ran fine, nothing matched
+//	2 - something went wrong (bad flags, unreadable signatures, bad target)
+const (
+	exitMatch   = 0
+	exitNoMatch = 1
+	exitFailure = 2
+)
+
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Usage: %s <file|directory>\n", os.Args[0])
-		os.Exit(1)
-	}
-
-	homePath, err := os.UserHomeDir()
+	code, err := run(os.Args[1:], os.Stdout, os.Stderr)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting the user's home path: %s\n", err)
-		os.Exit(1)
+		fmt.Fprintf(os.Stderr, "binmat: %v\n", err)
+	}
+	os.Exit(code)
+}
+
+func run(args []string, stdout, stderr io.Writer) (int, error) {
+	fs := flag.NewFlagSet("binmat", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+
+	defaultSigsPath, sigsPathErr := defaultSignaturesPath()
+
+	var (
+		sigsPath = fs.String("sigs", defaultSigsPath, "directory holding the .yaml signature definitions")
+		quiet    = fs.Bool("q", false, "suppress the scan summary, print matches only")
+	)
+
+	fs.Usage = func() {
+		fmt.Fprintf(stderr, "Usage: binmat [options] <file|directory>\n\n")
+		fmt.Fprintf(stderr, "Scans a file or directory tree against the YAML signatures in --sigs.\n\n")
+		fmt.Fprintf(stderr, "Options:\n")
+		fs.PrintDefaults()
+		fmt.Fprintf(stderr, "\nExit status: 0 if a signature matched, 1 if none did, 2 on error.\n")
 	}
 
-	sigsPath := filepath.Join(homePath, ".config/binmat")
-	sigs, err := sigio.LoadSignatures(sigsPath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading the .yaml signatures from '%s': %s\n", sigsPath, err)
-		os.Exit(1)
-	}
-
-	matches, _ := sigs.SearchMatches(os.Args[1])
-	fmt.Printf("Scanned %d files.\n", len(matches))
-	for _, match := range matches {
-		if match.IsMatch {
-			match.Write(os.Stdout)
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return exitMatch, nil
 		}
+		return exitFailure, nil // FlagSet already wrote the diagnostic
 	}
+
+	if fs.NArg() != 1 {
+		fs.Usage()
+		return exitFailure, nil
+	}
+	target := fs.Arg(0)
+
+	if *sigsPath == "" && sigsPathErr != nil {
+		return exitFailure, fmt.Errorf("resolving the default signatures directory: %w", sigsPathErr)
+	}
+
+	sigs, err := sigio.LoadSignatures(*sigsPath)
+	if err != nil {
+		return exitFailure, fmt.Errorf("loading signatures from %q: %w", *sigsPath, err)
+	}
+
+	matches, _ := sigs.SearchMatches(target)
+
+	// Summary goes to stderr so `binmat ./dir | jq` stays parseable.
+	if !*quiet {
+		fmt.Fprintf(stderr, "Scanned %d files.\n", len(matches))
+	}
+
+	var matched int
+	for _, match := range matches {
+		if !match.IsMatch {
+			continue
+		}
+
+		matched++
+		match.Write(stdout)
+	}
+
+	if matched == 0 {
+		return exitNoMatch, nil
+	}
+
+	return exitMatch, nil
+}
+
+func defaultSignaturesPath() (string, error) {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(dir, "binmat"), nil
 }
