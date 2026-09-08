@@ -5,16 +5,16 @@ const (
 	maskAnyByte   = 0x00
 )
 
-// matchOffsets is a slice of offsets where a pattern matches.
-type matchOffsets []int
+// MatchOffsets is a slice of offsets where a pattern matches.
+type MatchOffsets []int
 
 // len returns the number of offsets.
-func (m matchOffsets) len() int {
+func (m MatchOffsets) len() int {
 	return len(m)
 }
 
 // isMatch returns true if there is at least one match.
-func (m matchOffsets) isMatch() bool {
+func (m MatchOffsets) isMatch() bool {
 	return m.len() > 0
 }
 
@@ -62,7 +62,7 @@ func MakePatternWithMask(pattern, mask []byte) *SignaturePattern {
 //
 // The function expects the full file contents in a byte slice, as binaries themselves
 // are usually small enough to fit in memory.
-func (s *SignaturePattern) checkMatch(data []byte) matchOffsets {
+func (s *SignaturePattern) checkMatch(data []byte) MatchOffsets {
 	var (
 		offsets     []int
 		fileByte    byte
@@ -72,7 +72,9 @@ func (s *SignaturePattern) checkMatch(data []byte) matchOffsets {
 		maskFirstByte    = s.mask[0]
 	)
 
-	for i := 0; i < len(data)-s.Length(); i++ {
+	// The last candidate offset is the one where the pattern ends exactly at
+	// the last byte of the data, hence the <=.
+	for i := 0; i <= len(data)-s.Length(); i++ {
 		fileByte = data[i] & maskFirstByte
 
 		if fileByte != patternFirstByte {
@@ -81,17 +83,19 @@ func (s *SignaturePattern) checkMatch(data []byte) matchOffsets {
 
 		// The byte at i matches the first byte of the pattern.
 		// Check if the rest of the pattern matches.
+		matched := true
 		for j := 1; j < s.Length(); j++ {
 			fileByte = data[i+j] & s.mask[j]
 			patternByte = s.maskedPattern[j]
 
 			if patternByte != fileByte {
+				matched = false
 				break
 			}
+		}
 
-			if j == s.Length()-1 {
-				offsets = append(offsets, i)
-			}
+		if matched {
+			offsets = append(offsets, i)
 		}
 	}
 

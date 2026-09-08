@@ -24,7 +24,7 @@ func TestMatchPatternWithoutMask(t *testing.T) {
 			matches = sig.checkMatch(data)
 		)
 
-		assert.Equal(t, matchOffsets{0}, matches)
+		assert.Equal(t, MatchOffsets{0}, matches)
 	})
 
 	t.Run("One match starting at offset 2", func(t *testing.T) {
@@ -33,7 +33,7 @@ func TestMatchPatternWithoutMask(t *testing.T) {
 			matches = sig.checkMatch(data)
 		)
 
-		assert.Equal(t, matchOffsets{2}, matches)
+		assert.Equal(t, MatchOffsets{2}, matches)
 	})
 
 	t.Run("No match", func(t *testing.T) {
@@ -51,7 +51,35 @@ func TestMatchPatternWithoutMask(t *testing.T) {
 			matches = sig.checkMatch(data)
 		)
 
-		assert.Equal(t, matchOffsets{0, 5}, matches)
+		assert.Equal(t, MatchOffsets{0, 5}, matches)
+	})
+
+	t.Run("Match ending at the last byte", func(t *testing.T) {
+		var (
+			data    = []byte{0x00, 0x00, 0x01, 0x02, 0x03}
+			matches = sig.checkMatch(data)
+		)
+
+		assert.Equal(t, MatchOffsets{2}, matches)
+	})
+
+	t.Run("Pattern is the whole data", func(t *testing.T) {
+		var (
+			data    = []byte{0x01, 0x02, 0x03}
+			matches = sig.checkMatch(data)
+		)
+
+		assert.Equal(t, MatchOffsets{0}, matches)
+	})
+
+	t.Run("Single byte pattern", func(t *testing.T) {
+		var (
+			single  = MakePattern([]byte{0x03})
+			data    = []byte{0x03, 0x01, 0x03}
+			matches = single.checkMatch(data)
+		)
+
+		assert.Equal(t, MatchOffsets{0, 2}, matches)
 	})
 }
 
@@ -76,7 +104,7 @@ func TestMatchPatternWithMask(t *testing.T) {
 			matches = sig.checkMatch(data)
 		)
 
-		assert.Equal(t, matchOffsets{0}, matches)
+		assert.Equal(t, MatchOffsets{0}, matches)
 	})
 
 	t.Run("One match starting at offset 2", func(t *testing.T) {
@@ -85,7 +113,7 @@ func TestMatchPatternWithMask(t *testing.T) {
 			matches = sig.checkMatch(data)
 		)
 
-		assert.Equal(t, matchOffsets{2}, matches)
+		assert.Equal(t, MatchOffsets{2}, matches)
 	})
 
 	t.Run("No match", func(t *testing.T) {
@@ -103,6 +131,6 @@ func TestMatchPatternWithMask(t *testing.T) {
 			matches = sig.checkMatch(data)
 		)
 
-		assert.Equal(t, matchOffsets{0, 5}, matches)
+		assert.Equal(t, MatchOffsets{0, 5}, matches)
 	})
 }

@@ -72,20 +72,17 @@ func Make(
 
 // CheckMatch reads the file from the byte slice and checks each of the patterns
 // in the signature in parallel. It returns a SigMatches struct with the results.
-//
-// The function expects the full file contents in a byte slice, as binaries themselves
-// are usually small enough to fit in memory.
-func (s Signature) CheckMatch(data []byte) SigMatch {
+func (s Signature) CheckMatch(data []byte, filePath string) SigMatch {
 	ch := make(chan struct {
 		name    string
-		matches matchOffsets
+		matches MatchOffsets
 	})
 
 	for name, pattern := range s.Patterns {
 		go func(name string, pattern *SignaturePattern) {
 			ch <- struct {
 				name    string
-				matches matchOffsets
+				matches MatchOffsets
 			}{
 				name:    name,
 				matches: pattern.checkMatch(data),
@@ -94,7 +91,7 @@ func (s Signature) CheckMatch(data []byte) SigMatch {
 	}
 
 	var (
-		matchOffs = make(map[string]matchOffsets)
+		matchOffs = make(map[string]MatchOffsets)
 		matchVars = make(map[string]bool)
 	)
 	for range s.Patterns {
@@ -108,38 +105,50 @@ func (s Signature) CheckMatch(data []byte) SigMatch {
 	isMatch, _ := s.conditionFn(matchVars)
 
 	return SigMatch{
-		IsMatch:   isMatch,
-		Signature: &s,
-		Offsets:   matchOffs,
+		FilePath:         filePath,
+		SignatureName:    s.Name,
+		IsMatch:          isMatch,
+		OffsetsByPattern: matchOffs,
 	}
 }
 
 // Signatures is a collection of byte Signatures.
 type Signatures []Signature
 
+// MatchesBySignatureName groups the match results of every scanned file under
+// the name of the signature they were checked against.
+type MatchesBySignatureName map[string][]SigMatch
+
+// add appends the given matches to the entry of their signature.
+func (m MatchesBySignatureName) add(matches []SigMatch) {
+	for _, match := range matches {
+		m[match.SignatureName] = append(m[match.SignatureName], match)
+	}
+}
+
 // SearchMatches walks the given root:
 //   - if root is a file, it checks that file.
 //   - if root is a directory, it recursively checks every file.
 //
 // It collects all matches and returns them, along with any errors encountered.
-func (s Signatures) SearchMatches(root string) ([]SigMatch, []error) {
+func (s Signatures) SearchMatches(root string) (MatchesBySignatureName, []error) {
 	info, err := os.Stat(root)
 	if err != nil {
 		return nil, []error{err}
 	}
 
+	result := make(MatchesBySignatureName)
+
 	if !info.IsDir() {
 		matches, err := s.checkFile(root)
 		if err != nil {
-			return matches, []error{err}
+			return result, []error{err}
 		}
-		return matches, nil
+		result.add(matches)
+		return result, nil
 	}
 
-	var (
-		allMatches []SigMatch
-		errs       []error
-	)
+	var errs []error
 
 	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -159,16 +168,16 @@ func (s Signatures) SearchMatches(root string) ([]SigMatch, []error) {
 			return nil // continue with the next file
 		}
 
-		allMatches = append(allMatches, matches...)
+		result.add(matches)
 		return nil
 	})
 
 	// If WalkDir itself returns a fatal error (e.g., root doesn't exist),
 	// we return it; otherwise we return the collected errors.
-	if err != nil && len(allMatches) == 0 && len(errs) == 0 {
+	if err != nil && len(result) == 0 && len(errs) == 0 {
 		return nil, []error{err}
 	}
-	return allMatches, errs
+	return result, errs
 }
 
 func (s Signatures) checkFile(binPath string) ([]SigMatch, error) {
@@ -179,8 +188,7 @@ func (s Signatures) checkFile(binPath string) ([]SigMatch, error) {
 
 	matches := make([]SigMatch, len(s))
 	for i, sig := range s {
-		match := sig.CheckMatch(data)
-		match.Meta = &SigMatchMeta{FilePath: binPath}
+		match := sig.CheckMatch(data, binPath)
 		matches[i] = match
 	}
 

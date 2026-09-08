@@ -99,29 +99,31 @@ func TestSignature(t *testing.T) {
 
 	t.Run("no match", func(t *testing.T) {
 		noMatchSig, _ := Make("test", "test signature", patterns, "a AND (b AND c)")
-		matches := noMatchSig.CheckMatch(fileBytes)
+		matches := noMatchSig.CheckMatch(fileBytes, "path/to/bin")
 
 		assert.False(t, matches.IsMatch)
 	})
 
 	t.Run("match", func(t *testing.T) {
 		matchSig, _ := Make("test", "test signature", patterns, "a AND (b AND NOT c)")
-		matches := matchSig.CheckMatch(fileBytes)
+		matches := matchSig.CheckMatch(fileBytes, "path/to/bin")
 
 		assert.True(t, matches.IsMatch)
+		assert.Equal(t, "path/to/bin", matches.FilePath)
+		assert.Equal(t, "test", matches.SignatureName)
 	})
 
 	t.Run("matches offsets", func(t *testing.T) {
 		matchSig, _ := Make("test", "test signature", patterns, "a AND (b AND NOT c)")
-		matches := matchSig.CheckMatch(fileBytes)
+		matches := matchSig.CheckMatch(fileBytes, "path/to/bin")
 
-		aOff := matches.Offsets["a"]
-		assert.Equal(t, matchOffsets{4, 13}, aOff)
+		aOff := matches.OffsetsByPattern["a"]
+		assert.Equal(t, MatchOffsets{4, 13}, aOff)
 
-		bOff := matches.Offsets["b"]
-		assert.Equal(t, matchOffsets{6}, bOff)
+		bOff := matches.OffsetsByPattern["b"]
+		assert.Equal(t, MatchOffsets{6}, bOff)
 
-		cOff := matches.Offsets["c"]
+		cOff := matches.OffsetsByPattern["c"]
 		assert.Nil(t, cOff)
 	})
 }

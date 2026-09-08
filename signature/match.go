@@ -1,38 +1,30 @@
 package signature
 
 import (
-	"fmt"
+	"encoding/json"
 	"io"
 )
 
-type SigMatchMeta struct {
-	FilePath string
-}
-
 // A SigMatch is the result of attempting to match a file against a signature.
 type SigMatch struct {
-	Meta      *SigMatchMeta
-	Signature *Signature
-	IsMatch   bool
-	Offsets   map[string]matchOffsets
+	FilePath      string `json:"filePath"`
+	SignatureName string `json:"signatureName"`
+	// Whether the signature condition was met.
+	IsMatch bool `json:"isMatch"`
+	// The offsets at which each signature pattern was found in the file.
+	OffsetsByPattern map[string]MatchOffsets `json:"offsetsByPattern"`
 }
 
 func (sm *SigMatch) Len() int {
-	return len(sm.Offsets)
+	return len(sm.OffsetsByPattern)
 }
 
-func (sm *SigMatch) Write(w io.Writer) {
-	io.WriteString(w, "================================================================================\n")
-	io.WriteString(w, fmt.Sprintf("File:         %s\n", sm.Meta.FilePath))
-	io.WriteString(w, fmt.Sprintf("Signature:    %s\n", sm.Signature.Name))
-	io.WriteString(w, fmt.Sprintf("Description:  %s\n", sm.Signature.Description))
-	io.WriteString(w, "================================================================================\n")
-
-	if !sm.IsMatch {
-		io.WriteString(w, "No matches found\n\n")
-		return
+func (sm *SigMatch) WriteJSON(w io.Writer) error {
+	jsonData, err := json.Marshal(sm)
+	if err != nil {
+		return err
 	}
 
-	io.WriteString(w, fmt.Sprintf("%d Matches found at offsets: \n", sm.Len()))
-	io.WriteString(w, "\n")
+	w.Write(jsonData)
+	return nil
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -39,7 +40,6 @@ func run(args []string, stdout, stderr io.Writer) (int, error) {
 
 	var (
 		sigsPath = fs.String("sigs", defaultSigsPath, "directory holding the .yaml signature definitions")
-		quiet    = fs.Bool("q", false, "suppress the scan summary, print matches only")
 	)
 
 	fs.Usage = func() {
@@ -73,25 +73,16 @@ func run(args []string, stdout, stderr io.Writer) (int, error) {
 	}
 
 	matches, _ := sigs.SearchMatches(target)
-
-	// Summary goes to stderr so `binmat ./dir | jq` stays parseable.
-	if !*quiet {
-		fmt.Fprintf(stderr, "Scanned %d files.\n", len(matches))
+	jsonResult, err := json.Marshal(matches)
+	if err != nil {
+		return exitFailure, fmt.Errorf("generating JSON report: %v", err)
 	}
 
-	var matched int
-	for _, match := range matches {
-		if !match.IsMatch {
-			continue
-		}
+	stdout.Write(jsonResult)
 
-		matched++
-		match.Write(stdout)
-	}
-
-	if matched == 0 {
-		return exitNoMatch, nil
-	}
+	// if matched == 0 {
+	// 	return exitNoMatch, nil
+	// }
 
 	return exitMatch, nil
 }
