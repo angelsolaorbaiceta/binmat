@@ -80,9 +80,9 @@ func run(args []string, stdout, stderr io.Writer) (int, error) {
 
 	stdout.Write(jsonResult)
 
-	// if matched == 0 {
-	// 	return exitNoMatch, nil
-	// }
+	if len(matches) == 0 {
+		return exitNoMatch, nil
+	}
 
 	return exitMatch, nil
 }

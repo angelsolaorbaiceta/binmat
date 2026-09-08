@@ -13,8 +13,9 @@ import (
 
 // A SigMatch is the result of attempting to match a file against a signature.
 type SigMatch struct {
-	FilePath      string `json:"filePath"`
-	SignatureName string `json:"signatureName"`
+	FilePath           string `json:"filePath"`
+	SignatureName      string `json:"signatureName"`
+	SignatureCondition string `json:"signatureCondition"`
 	// Whether the signature condition was met.
 	IsMatch bool `json:"isMatch"`
 	// The offsets at which each signature pattern was found in the file.
@@ -98,7 +99,7 @@ func Make(
 
 // CheckMatch reads the file from the byte slice and checks each of the patterns
 // in the signature in parallel. It returns a SigMatches struct with the results.
-func (s Signature) CheckMatch(data []byte, filePath string) SigMatch {
+func (s Signature) CheckMatch(data []byte, filePath string) *SigMatch {
 	ch := make(chan struct {
 		name    string
 		matches PatternMatchOffsets
@@ -130,11 +131,12 @@ func (s Signature) CheckMatch(data []byte, filePath string) SigMatch {
 	// be present in the patterns map. No error should be returned here.
 	isMatch, _ := s.conditionFn(matchVars)
 
-	return SigMatch{
-		FilePath:         filePath,
-		SignatureName:    s.Name,
-		IsMatch:          isMatch,
-		OffsetsByPattern: matchOffs,
+	return &SigMatch{
+		FilePath:           filePath,
+		SignatureName:      s.Name,
+		SignatureCondition: s.Condition,
+		IsMatch:            isMatch,
+		OffsetsByPattern:   matchOffs,
 	}
 }
 
@@ -143,12 +145,14 @@ type Signatures []Signature
 
 // MatchesBySignatureName groups the match results of every scanned file under
 // the name of the signature they were checked against.
-type MatchesBySignatureName map[string][]SigMatch
+type MatchesBySignatureName map[string][]*SigMatch
 
 // add appends the given matches to the entry of their signature.
-func (m MatchesBySignatureName) add(matches []SigMatch) {
+func (m MatchesBySignatureName) add(matches []*SigMatch) {
 	for _, match := range matches {
-		m[match.SignatureName] = append(m[match.SignatureName], match)
+		if match.IsMatch {
+			m[match.SignatureName] = append(m[match.SignatureName], match)
+		}
 	}
 }
 
@@ -171,6 +175,7 @@ func (s Signatures) SearchMatches(root string) (MatchesBySignatureName, []error)
 			return result, []error{err}
 		}
 		result.add(matches)
+
 		return result, nil
 	}
 
@@ -206,13 +211,13 @@ func (s Signatures) SearchMatches(root string) (MatchesBySignatureName, []error)
 	return result, errs
 }
 
-func (s Signatures) checkFile(binPath string) ([]SigMatch, error) {
+func (s Signatures) checkFile(binPath string) ([]*SigMatch, error) {
 	data, err := readFileBytes(binPath)
 	if err != nil {
 		return nil, err
 	}
 
-	matches := make([]SigMatch, len(s))
+	matches := make([]*SigMatch, len(s))
 	for i, sig := range s {
 		match := sig.CheckMatch(data, binPath)
 		matches[i] = match
