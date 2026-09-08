@@ -11,7 +11,7 @@ type SigMatchMeta struct {
 
 // A SigMatch is the result of attempting to match a file against a signature.
 type SigMatch struct {
-	Meta      SigMatchMeta
+	Meta      *SigMatchMeta
 	Signature *Signature
 	IsMatch   bool
 	Offsets   map[string]matchOffsets

@@ -180,7 +180,7 @@ func (s Signatures) checkFile(binPath string) ([]SigMatch, error) {
 	matches := make([]SigMatch, len(s))
 	for i, sig := range s {
 		match := sig.CheckMatch(data)
-		match.Meta = SigMatchMeta{FilePath: binPath}
+		match.Meta = &SigMatchMeta{FilePath: binPath}
 		matches[i] = match
 	}
 
