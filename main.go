@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	sigio "github.com/angelsolaorbaiceta/binmat/signature/io"
+	sigio "github.com/angelsolaorbaiceta/binmat/internal/signature/io"
 )
 
 // Exit codes follow grep's convention, which is what anyone scripting a

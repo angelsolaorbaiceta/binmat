@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/angelsolaorbaiceta/binmat/bexpr"
+	"github.com/angelsolaorbaiceta/binmat/internal/bexpr"
 )
 
 // A SigMatch is the result of attempting to match a file against a signature.

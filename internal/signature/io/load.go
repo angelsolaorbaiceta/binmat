@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/angelsolaorbaiceta/binmat/signature"
+	"github.com/angelsolaorbaiceta/binmat/internal/signature"
 )
 
 // LoadSignatures loads the signatures from the .yaml files found at the given

@@ -7,7 +7,7 @@ help:  ## Display this help
 
 .PHONY: test
 test: ## Run all the tests
-	go test -v ./...
+	go test ./...
 
 .PHONY: build
 build: ## Build the binary

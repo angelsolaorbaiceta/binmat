@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/angelsolaorbaiceta/binmat/signature"
+	"github.com/angelsolaorbaiceta/binmat/internal/signature"
 	"gopkg.in/yaml.v3"
 )
 
