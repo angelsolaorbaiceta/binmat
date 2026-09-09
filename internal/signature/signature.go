@@ -147,8 +147,9 @@ type Signatures []Signature
 // the name of the signature they were checked against.
 type MatchesBySignatureName map[string][]*SigMatch
 
-// add appends the given matches to the entry of their signature.
-func (m MatchesBySignatureName) add(matches []*SigMatch) {
+// addIfMatch appends the given matches to the entry of their signature if the
+// result matched.
+func (m MatchesBySignatureName) addIfMatch(matches []*SigMatch) {
 	for _, match := range matches {
 		if match.IsMatch {
 			m[match.SignatureName] = append(m[match.SignatureName], match)
@@ -174,7 +175,7 @@ func (s Signatures) SearchMatches(root string) (MatchesBySignatureName, []error)
 		if err != nil {
 			return result, []error{err}
 		}
-		result.add(matches)
+		result.addIfMatch(matches)
 
 		return result, nil
 	}
@@ -199,7 +200,7 @@ func (s Signatures) SearchMatches(root string) (MatchesBySignatureName, []error)
 			return nil // continue with the next file
 		}
 
-		result.add(matches)
+		result.addIfMatch(matches)
 		return nil
 	})
 
