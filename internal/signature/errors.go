@@ -9,6 +9,7 @@ const (
 	ErrSigEmptyPatterns  ErrSignatureReason = "the patterns map can't be empty"
 	ErrSigWrongCondition ErrSignatureReason = "the condition is either empty or invalid"
 	ErrSigMissingPattern ErrSignatureReason = "missing pattern for condition"
+	ErrSigWrongPattern   ErrSignatureReason = "a pattern can't be parsed"
 )
 
 // An ErrSignature is an error originating from an ill-formed signature.

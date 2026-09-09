@@ -2,6 +2,7 @@ package signature
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/angelsolaorbaiceta/binmat/internal/bexpr"
+	"gopkg.in/yaml.v3"
 )
 
 // A SigMatch is the result of attempting to match a file against a signature.
@@ -36,65 +38,128 @@ func (sm *SigMatch) WriteJSON(w io.Writer) error {
 	return nil
 }
 
-// A Signature is a pattern that can be matched in a file.
-// A Signature is defined by a name, a description, a pattern, and a mask.
-// The pattern is the sequence of bytes that must be matched.
-// The mask is applied to the pattern to define which bytes must be matched, and
-// which can be ignored.
+// A Signature identifies a binary through a set of named patterns and a
+// boolean condition over them. It is both the YAML document users write and
+// the compiled form used for matching: the exported fields hold the textual
+// definition, the unexported ones hold their compiled counterparts.
 type Signature struct {
-	Name        string
-	Description string
-	Patterns    map[string]*SignaturePattern
-	Condition   string
+	Name        string            `yaml:"name"`
+	Description string            `yaml:"description"`
+	Patterns    map[string]string `yaml:"patterns"`
+	Condition   string            `yaml:"condition"`
+
+	// patterns holds the parsed Patterns, by name.
+	patterns map[string]*SignaturePattern
+	// conditionFn holds the parsed Condition.
 	conditionFn bexpr.Condition
 }
 
 // Make creates a new Signature with the given name, description, patterns,
-// and condition.
-// If the condition can't be successfully parsed, an error is returned.
-// If any of the pattern names doesn't adhere to the convention, an error is returned.
+// and condition, and compiles it so it's ready to match.
+// If the condition or any of the patterns can't be parsed, or the condition
+// refers to patterns that aren't defined, an ErrSignature is returned.
 func Make(
 	name, description string,
-	patterns map[string]*SignaturePattern,
+	patterns map[string]string,
 	condition string,
 ) (Signature, error) {
-	var signature Signature
-
-	if len(strings.TrimSpace(name)) == 0 {
-		return signature, ErrSignature{reason: ErrSigEmptyName}
+	sig := Signature{
+		Name:        name,
+		Description: description,
+		Patterns:    patterns,
+		Condition:   condition,
 	}
 
-	if len(patterns) == 0 {
-		return signature, ErrSignature{reason: ErrSigEmptyPatterns}
+	if err := sig.compile(); err != nil {
+		return Signature{}, err
 	}
 
-	if len(strings.TrimSpace(condition)) == 0 {
-		return signature, ErrSignature{reason: ErrSigWrongCondition}
+	return sig, nil
+}
+
+// ReadFromYaml decodes a Signature from its YAML representation.
+// The returned signature is validated and compiled, ready to match.
+func ReadFromYaml(r io.Reader) (Signature, error) {
+	var sig Signature
+	err := yaml.NewDecoder(r).Decode(&sig)
+
+	return sig, err
+}
+
+// WriteYAML encodes the signature definition as YAML.
+func (s Signature) WriteYAML(w io.Writer) error {
+	enc := yaml.NewEncoder(w)
+	if err := enc.Encode(s); err != nil {
+		return err
 	}
 
-	conditionFn, err := bexpr.ParseCondition(condition)
+	return enc.Close()
+}
+
+// UnmarshalYAML decodes the textual definition and compiles it, so a
+// Signature decoded from YAML is never left in an unusable state.
+func (s *Signature) UnmarshalYAML(node *yaml.Node) error {
+	// Decode into a type without this method so the decoder doesn't recurse.
+	type plain Signature
+	var decoded plain
+
+	if err := node.Decode(&decoded); err != nil {
+		return err
+	}
+
+	*s = Signature(decoded)
+
+	return s.compile()
+}
+
+// compile validates the textual definition and parses the patterns and the
+// condition into their runnable forms.
+func (s *Signature) compile() error {
+	if len(strings.TrimSpace(s.Name)) == 0 {
+		return ErrSignature{reason: ErrSigEmptyName}
+	}
+
+	if len(s.Patterns) == 0 {
+		return ErrSignature{reason: ErrSigEmptyPatterns}
+	}
+
+	if len(strings.TrimSpace(s.Condition)) == 0 {
+		return ErrSignature{reason: ErrSigWrongCondition}
+	}
+
+	patterns := make(map[string]*SignaturePattern, len(s.Patterns))
+	for name, raw := range s.Patterns {
+		pattern, err := ParsePattern(raw)
+		if err != nil {
+			return ErrSignature{
+				reason: ErrSigWrongPattern,
+				cause:  fmt.Errorf("pattern %q: %w", name, err),
+			}
+		}
+
+		patterns[name] = pattern
+	}
+
+	conditionFn, err := bexpr.ParseCondition(s.Condition)
 	if err != nil {
-		return signature, ErrSignature{reason: ErrSigWrongCondition, cause: err}
+		return ErrSignature{reason: ErrSigWrongCondition, cause: err}
 	}
 
 	// Create a map where all pattern names are assigned "true" to test if the
 	// conditionFn has all the variables it needs.
-	varsMap := make(map[string]bool)
+	varsMap := make(map[string]bool, len(patterns))
 	for name := range patterns {
 		varsMap[name] = true
 	}
 
 	if _, err := conditionFn(varsMap); err != nil {
-		return signature, ErrSignature{reason: ErrSigMissingPattern, cause: err}
+		return ErrSignature{reason: ErrSigMissingPattern, cause: err}
 	}
 
-	signature.Name = name
-	signature.Description = description
-	signature.Patterns = patterns
-	signature.Condition = condition
-	signature.conditionFn = conditionFn
+	s.patterns = patterns
+	s.conditionFn = conditionFn
 
-	return signature, nil
+	return nil
 }
 
 // CheckMatch reads the file from the byte slice and checks each of the patterns
@@ -105,7 +170,7 @@ func (s Signature) CheckMatch(data []byte, filePath string) *SigMatch {
 		matches PatternMatchOffsets
 	})
 
-	for name, pattern := range s.Patterns {
+	for name, pattern := range s.patterns {
 		go func(name string, pattern *SignaturePattern) {
 			ch <- struct {
 				name    string
@@ -121,7 +186,7 @@ func (s Signature) CheckMatch(data []byte, filePath string) *SigMatch {
 		matchOffs = make(map[string]PatternMatchOffsets)
 		matchVars = make(map[string]bool)
 	)
-	for range s.Patterns {
+	for range s.patterns {
 		match := <-ch
 		matchOffs[match.name] = match.matches
 		matchVars[match.name] = match.matches.isMatch()

@@ -20,8 +20,8 @@ func TestSearchMatches(t *testing.T) {
 	os.WriteFile(three, []byte{0xff, 0xff, 0xff}, 0o644)
 
 	// sigA matches "one" only, sigB matches "two" only, nothing matches "three".
-	sigA, _ := Make("sig_a", "", map[string]*SignaturePattern{"p": MakePattern([]byte{0x01, 0x02})}, "p")
-	sigB, _ := Make("sig_b", "", map[string]*SignaturePattern{"p": MakePattern([]byte{0xbb, 0xcc})}, "p")
+	sigA, _ := Make("sig_a", "", map[string]string{"p": "{ 01 02 }"}, "p")
+	sigB, _ := Make("sig_b", "", map[string]string{"p": "{ bb cc }"}, "p")
 	sigs := Signatures{sigA, sigB}
 
 	t.Run("directory: only matching results are kept, grouped by signature", func(t *testing.T) {

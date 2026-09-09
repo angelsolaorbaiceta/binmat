@@ -1,9 +1,21 @@
 package signature
 
+import (
+	"errors"
+	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
+)
+
 const (
 	maskMatchByte = 0xff
 	maskAnyByte   = 0x00
 )
+
+// bytePatternRe recognizes byte sequence patterns: hex byte pairs or "??"
+// wildcards, separated by spaces and enclosed in curly brackets.
+var bytePatternRe = regexp.MustCompile(`^\s*\{[0-9a-fA-F ?]*\}\s*$`)
 
 // PatternMatchOffsets is a slice of offsets where a pattern matches.
 type PatternMatchOffsets []int
@@ -29,6 +41,54 @@ type SignaturePattern struct {
 // Length returns the Length of the pattern and mask.
 func (s *SignaturePattern) Length() int {
 	return len(s.pattern)
+}
+
+// ParsePattern parses the textual form of a pattern, as written in the
+// signature files, into a SignaturePattern.
+//
+// A pattern is either a byte sequence, like "{ 74 fc ?? 45 }", where "??"
+// matches any byte at that position, or any other non-empty string, which is
+// matched as its ASCII bytes.
+func ParsePattern(pattern string) (*SignaturePattern, error) {
+	if !bytePatternRe.MatchString(pattern) {
+		if len(pattern) == 0 {
+			return nil, errors.New("pattern can't be empty")
+		}
+
+		// The sequence appears to be a string. Convert to its ascii bytes.
+		return MakePattern([]byte(pattern)), nil
+	}
+
+	var (
+		stripped    = strings.Trim(pattern, "{ }")
+		fields      = strings.Fields(stripped)
+		bytePattern = make([]byte, len(fields))
+		byteMask    = make([]byte, len(fields))
+	)
+
+	if len(fields) == 0 {
+		return nil, errors.New("byte sequence can't be empty")
+	}
+
+	for i, field := range fields {
+		if len(field) != 2 {
+			return nil, fmt.Errorf("byte should have a length of 2 chars, got '%s'", field)
+		}
+
+		if field == "??" {
+			bytePattern[i] = 0x00
+			byteMask[i] = maskAnyByte
+		} else {
+			// At this point, field is known to be a two characters string consisting
+			// of numbers and the letters A to F, thus the ParseUInt using hexadecimal
+			// base can't fail. The error is ignored.
+			value, _ := strconv.ParseUint(field, 16, 8)
+			bytePattern[i] = byte(value)
+			byteMask[i] = maskMatchByte
+		}
+	}
+
+	return MakePatternWithMask(bytePattern, byteMask), nil
 }
 
 func MakePattern(pattern []byte) *SignaturePattern {

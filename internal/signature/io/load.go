@@ -1,6 +1,7 @@
 package io
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -10,42 +11,33 @@ import (
 // LoadSignatures loads the signatures from the .yaml files found at the given
 // directory path, typically "$HOME/.config/binmat".
 func LoadSignatures(path string) (signature.Signatures, error) {
-	signatures, err := loadIOSignatures(path)
-	if err != nil {
-		return nil, err
-	}
-
-	domainSigs, err := signaturesToDomain(signatures)
-	if err != nil {
-		return nil, err
-	}
-
-	return domainSigs, nil
-}
-
-func loadIOSignatures(path string) ([]Signature, error) {
 	yamlFilePaths, err := findYamlFiles(path)
 	if err != nil {
 		return nil, err
 	}
 
-	signatures := make([]Signature, len(yamlFilePaths))
+	signatures := make(signature.Signatures, 0, len(yamlFilePaths))
 
-	for i, filePath := range yamlFilePaths {
-		r, err := os.Open(filePath)
+	for _, filePath := range yamlFilePaths {
+		sig, err := loadSignature(filePath)
 		if err != nil {
-			return signatures, err
+			return nil, fmt.Errorf("%s: %w", filePath, err)
 		}
 
-		sig, err := ReadFromYaml(r)
-		if err != nil {
-			return signatures, err
-		}
-
-		signatures[i] = sig
+		signatures = append(signatures, sig)
 	}
 
 	return signatures, nil
+}
+
+func loadSignature(filePath string) (signature.Signature, error) {
+	r, err := os.Open(filePath)
+	if err != nil {
+		return signature.Signature{}, err
+	}
+	defer r.Close()
+
+	return signature.ReadFromYaml(r)
 }
 
 // findYamlFiles returns a slice of full paths to all .yaml files found in the

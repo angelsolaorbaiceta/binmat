@@ -7,9 +7,9 @@ import (
 )
 
 func TestCreateSignature(t *testing.T) {
-	patterns := map[string]*SignaturePattern{
-		"a": nil,
-		"b": nil,
+	patterns := map[string]string{
+		"a": "{ 01 02 ?? 04 }",
+		"b": "some string",
 	}
 
 	t.Run("Create signature", func(t *testing.T) {
@@ -20,6 +20,12 @@ func TestCreateSignature(t *testing.T) {
 		assert.Equal(t, "description", sig.Description)
 		assert.Equal(t, patterns, sig.Patterns)
 		assert.Equal(t, "a AND b", sig.Condition)
+
+		wantPatterns := map[string]*SignaturePattern{
+			"a": MakePatternWithMask([]byte{0x01, 0x02, 0x00, 0x04}, []byte{0xff, 0xff, 0x00, 0xff}),
+			"b": MakePattern([]byte("some string")),
+		}
+		assert.Equal(t, wantPatterns, sig.patterns)
 
 		vars := map[string]bool{
 			"a": true,
@@ -45,10 +51,17 @@ func TestCreateSignature(t *testing.T) {
 	})
 
 	t.Run("Can't create signature with empty patterns map", func(t *testing.T) {
-		_, err := Make("name", "description", map[string]*SignaturePattern{}, "a AND b")
+		_, err := Make("name", "description", map[string]string{}, "a AND b")
 
 		assert.NotNil(t, err)
 		assert.Equal(t, ErrSigEmptyPatterns, err.(ErrSignature).reason)
+	})
+
+	t.Run("Can't create signature with a non-parsable pattern", func(t *testing.T) {
+		_, err := Make("name", "description", map[string]string{"a": "{ 01 02 b 78 }"}, "a")
+
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrSigWrongPattern, err.(ErrSignature).reason)
 	})
 
 	t.Run("Can't create signature with empty condition", func(t *testing.T) {
@@ -89,12 +102,12 @@ func TestSignature(t *testing.T) {
 	}
 
 	// Pattern a and b are present, but c is not
-	patterns := map[string]*SignaturePattern{
+	patterns := map[string]string{
 		// Pattern a is found at offsets 4 and 13
-		"a": MakePattern([]byte{0x01, 0x02, 0x03}),
+		"a": "{ 01 02 03 }",
 		// Pattern b is found at offset 6
-		"b": MakePattern([]byte{0x03, 0x02, 0x01}),
-		"c": MakePattern([]byte{0x44, 0x55, 0x66}),
+		"b": "{ 03 02 01 }",
+		"c": "{ 44 55 66 }",
 	}
 
 	t.Run("no match", func(t *testing.T) {
