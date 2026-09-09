@@ -72,7 +72,11 @@ func run(args []string, stdout, stderr io.Writer) (int, error) {
 		return exitFailure, fmt.Errorf("loading signatures from %q: %w", *sigsPath, err)
 	}
 
-	matches, _ := sigs.SearchMatches(target)
+	matches, errs := sigs.SearchMatches(target)
+	for _, e := range errs {
+		fmt.Fprintf(stderr, "searching matches: %v\n", e)
+	}
+
 	jsonResult, err := json.Marshal(matches)
 	if err != nil {
 		return exitFailure, fmt.Errorf("generating JSON report: %v", err)
