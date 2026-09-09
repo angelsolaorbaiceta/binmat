@@ -24,4 +24,17 @@ func TestCLI(t *testing.T) {
 		assert.Contains(string(stderr.Bytes()), "Usage: binmat [options] <file|directory>")
 	})
 
+	t.Run("Missing path argument", func(t *testing.T) {
+		var (
+			stdout = bytes.NewBuffer([]byte{})
+			stderr = bytes.NewBuffer([]byte{})
+		)
+
+		exitCode, err := run([]string{}, stdout, stderr)
+
+		assert.Nil(err)
+		assert.Equal(exitFailure, exitCode)
+		assert.Zero(stdout.Available())
+		assert.Contains(string(stderr.Bytes()), "Usage: binmat [options] <file|directory>")
+	})
 }

@@ -9,17 +9,28 @@ import (
 )
 
 func TestLoadSignatures(t *testing.T) {
-	fixture, err := os.ReadFile("../../../examples/signatures/__io_test.yaml")
+	fixture, err := os.ReadFile("io_test.yaml")
 	if err != nil {
 		panic("Can't read file" + err.Error())
 	}
 
 	t.Run("loads only the top-level .yaml files", func(t *testing.T) {
-		dir := t.TempDir()
-		os.WriteFile(filepath.Join(dir, "one.yaml"), fixture, 0o644)
-		os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("not a signature"), 0o644)
+		var (
+			dir           = t.TempDir()
+			fileOnePath   = filepath.Join(dir, "one.yaml")
+			fileTwoPath   = filepath.Join(dir, "nested", "two.yaml")
+			fileNotesPath = filepath.Join(dir, "notes.txt")
+		)
+		os.WriteFile(fileOnePath, fixture, 0o644)
+		os.WriteFile(fileNotesPath, []byte("not a signature"), 0o644)
 		os.MkdirAll(filepath.Join(dir, "nested"), 0o755)
-		os.WriteFile(filepath.Join(dir, "nested", "two.yaml"), fixture, 0o644)
+		os.WriteFile(fileTwoPath, fixture, 0o644)
+
+		t.Cleanup(func() {
+			os.Remove(fileOnePath)
+			os.Remove(fileTwoPath)
+			os.Remove(fileNotesPath)
+		})
 
 		sigs, err := LoadSignatures(dir)
 
@@ -29,9 +40,18 @@ func TestLoadSignatures(t *testing.T) {
 	})
 
 	t.Run("fails if any signature is invalid", func(t *testing.T) {
-		dir := t.TempDir()
-		os.WriteFile(filepath.Join(dir, "good.yaml"), fixture, 0o644)
-		os.WriteFile(filepath.Join(dir, "bad.yaml"), []byte("name: bad\npatterns:\n  a: '{ 01 b }'\ncondition: a\n"), 0o644)
+		var (
+			dir          = t.TempDir()
+			fileGoodPath = filepath.Join(dir, "good.yaml")
+			fileBadPath  = filepath.Join(dir, "bad.yaml")
+		)
+		os.WriteFile(fileGoodPath, fixture, 0o644)
+		os.WriteFile(fileBadPath, []byte("name: bad\npatterns:\n  a: '{ 01 b }'\ncondition: a\n"), 0o644)
+
+		t.Cleanup(func() {
+			os.Remove(fileGoodPath)
+			os.Remove(fileBadPath)
+		})
 
 		sigs, err := LoadSignatures(dir)
 
