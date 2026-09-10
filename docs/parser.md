@@ -135,27 +135,34 @@ marks the operand that never arrived.
 
 ## Tokenizer
 
-`tokenize` in `tokenizer.go` is a single regular expression applied with
-`FindAllString`:
+`tokenize` in `tokenizer.go` finds the tokens with a single regular expression:
 
 ```
 [a-z0-9_]+|AND|OR|NOT|\(|\)
 ```
 
-It returns every match, in order. Alternation is tried left to right at each
-position, so a run of lowercase characters is always a variable, and the
-uppercase keywords are only recognised as such because lowercase letters can't
-start them.
+`FindAllStringIndex` returns every match, in order, with its position.
+Alternation is tried left to right at each position, so a run of lowercase
+characters is always a variable, and the uppercase keywords are only recognised
+as such because lowercase letters can't start them.
 
-Two consequences are worth knowing:
+The regular expression alone would skip anything it doesn't match, so the
+tokenizer also inspects the text *between* consecutive matches, and before the
+first and after the last. That text may contain only whitespace, as defined by
+`unicode.IsSpace`, which is how spaces, tabs and newlines are ignored and why
+parentheses don't need surrounding spaces. The first character in a gap that
+isn't whitespace stops tokenizing with `ParseErrUnexpectedChar`, reporting the
+character and its 1-based column, counted in characters rather than bytes:
 
-- **Whitespace is not a token.** Anything between matches is skipped, which is
-  how spaces are ignored. Parentheses don't need surrounding spaces.
-- **Unknown characters are dropped silently.** The tokenizer has no error path.
-  `a & b` becomes `["a" "b"]`, `Foo` becomes `["oo"]`, and `a AND b-c` becomes
-  `["a" "AND" "b" "c"]`. The parser then fails on the resulting token stream
-  when it can (two adjacent variables are an "invalid append attempt"), but
-  `Foo` parses happily as the variable `oo`. See [Quirks](#quirks-and-limitations).
+```
+a & b        → unexpected character ('&' at column 3)
+Foo AND bar  → unexpected character ('F' at column 1)
+a AND b-c    → unexpected character ('-' at column 8)
+ANDY         → unexpected character ('Y' at column 4)
+```
+
+Without this check `Foo AND bar` would tokenize to `["oo" "AND" "bar"]` and
+parse as a different, valid condition.
 
 Variable length is not enforced here. The regex accepts runs of any length; the
 parser checks each variable token against `IsValidVarName` and reports
@@ -439,6 +446,7 @@ variable, and after the load-time check that can't happen either, so
 
 | Reason | Constant | Raised when | Detail | Example |
 |---|---|---|---|---|
+| unexpected character | `ParseErrUnexpectedChar` | the text between two tokens contains something other than whitespace | the character and its 1-based column | `a & b`, `Foo AND bar` |
 | invalid variable name | `ParseErrInvalidVarName` | a variable token fails `IsValidVarName` (in practice, it's longer than 16 characters) | the offending name and the rule | `a_very_long_variable_name AND b` |
 | invalid append attempt | `ParseErrInvalidAppend` | a token can't follow what came before it | the expression it couldn't be appended to | `a b`, `a NOT b`, `a AND AND b`, `(a OR b) c` |
 | incomplete binary operation | `ParseErrIncompleteExpr` | an operand is missing once the tokens run out | the rendered tree, with `??` for the hole | `a AND`, `OR b`, `a AND ()` |
@@ -452,14 +460,13 @@ Evaluation has a single error, `ErrMissingVarValue`, described above.
 
 ## Quirks and limitations
 
-- **Unknown characters vanish.** The tokenizer drops anything it doesn't
-  recognise instead of failing. Most such inputs still fail later with a less
-  precise message (`a & b` becomes `a b`), but some parse as something else
-  entirely: `Foo AND bar` is the condition `oo AND bar`. A tokenizer that
-  reports unexpected characters would be a strict improvement.
 - **Keywords are case-sensitive.** `a and b` treats `and` as a variable name
   and fails with an invalid append. Only uppercase `AND`, `OR` and `NOT` are
   operators.
+- **Tokens don't need separating whitespace.** The tokenizer only checks the
+  text between matches, so `a ANDb` and `aAND b` both tokenize to
+  `["a" "AND" "b"]` and parse as `a AND b`. Uppercase runs that aren't exactly
+  a keyword do fail, since the leftover letters are unexpected characters.
 - **No short-circuit evaluation.** Cheap by design here, since evaluation is a
   handful of map lookups per file, but worth knowing if the tree ever grows
   expensive leaves.
@@ -471,7 +478,8 @@ Evaluation has a single error, `ErrMissingVarValue`, described above.
 
 The package is tested at three levels, all in `internal/bexpr`:
 
-- `tokenizer_test.go` checks the token stream for a few inputs.
+- `tokenizer_test.go` checks the token stream for a few inputs, and that
+  unexpected characters are reported with the right column.
 - `cond_and_test.go`, `cond_or_test.go`, `cond_not_test.go` and
   `cond_group_test.go` exercise each node type in isolation: operand setters,
   `String()` rendering with `??`, and the rules on what can be set as an
@@ -479,9 +487,10 @@ The package is tested at three levels, all in `internal/bexpr`:
 - `parser_test.go` drives `ParseCondition` end to end. `TestParseCondition`
   covers the basic shapes and error reasons. `TestParseChainedConditions`
   covers chained operators and precedence with explicit truth tables.
-  `TestParseIncompleteChains` covers malformed chains, and
+  `TestParseIncompleteChains` covers malformed chains,
   `TestParseUnbalancedParentheses` covers parenthesis balance in both
-  directions plus deep nesting.
+  directions plus deep nesting, and `TestParseUnexpectedCharacters` checks
+  that tokenizer errors surface through `ParseCondition`.
 
 The truth-table style is the recommended way to add coverage for a new shape:
 list the condition, then every combination of variable values that matters and

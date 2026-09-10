@@ -31,13 +31,17 @@ type parser struct {
 	cond   string // original condition for error messages
 }
 
-func parserFromCond(condition string) *parser {
-	tokens := tokenize(condition)
+func parserFromCond(condition string) (*parser, *ErrConditionParse) {
+	tokens, err := tokenize(condition)
+	if err != nil {
+		return nil, err
+	}
+
 	return &parser{
 		tokens: tokens,
 		idx:    0,
 		cond:   condition,
-	}
+	}, nil
 }
 
 func (p *parser) hasNext() bool {
@@ -88,7 +92,11 @@ func (p *parser) next() string {
 //
 // If the expression can't be parsed, an ErrConditionParse error is returned.
 func ParseCondition(condition string) (Condition, *ErrConditionParse) {
-	p := parserFromCond(condition)
+	p, err := parserFromCond(condition)
+	if err != nil {
+		return nil, err
+	}
+
 	expr, err := parse(p, 0)
 	if err != nil {
 		return nil, err

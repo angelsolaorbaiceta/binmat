@@ -20,6 +20,7 @@ const (
 	ParseErrInvalidVarName   ParseErrorReason = "invalid variable name"
 	ParseErrIncompleteExpr   ParseErrorReason = "incomplete binary operation"
 	ParseErrUnbalancedParens ParseErrorReason = "unbalanced parentheses"
+	ParseErrUnexpectedChar   ParseErrorReason = "unexpected character"
 )
 
 // ErrConditionParse is returned when a condition expression can't be parsed due

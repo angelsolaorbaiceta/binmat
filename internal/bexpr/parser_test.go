@@ -428,3 +428,24 @@ func TestParseUnbalancedParentheses(t *testing.T) {
 		})
 	}
 }
+
+// TestParseUnexpectedCharacters makes sure tokenizer errors surface through
+// ParseCondition, so a typo can't turn into a different, valid condition.
+func TestParseUnexpectedCharacters(t *testing.T) {
+	for _, cond := range []string{
+		"a & b",
+		"Foo AND bar",
+		"a AND b-c",
+		"ANDY",
+	} {
+		t.Run(fmt.Sprintf("Condition: '%s'", cond), func(t *testing.T) {
+			_, err := ParseCondition(cond)
+			if err == nil {
+				t.Fatal("Want parsing error, got none")
+			}
+			if err.Reason != ParseErrUnexpectedChar {
+				t.Fatalf("Want reason '%s', got '%s'", ParseErrUnexpectedChar, err.Reason)
+			}
+		})
+	}
+}
