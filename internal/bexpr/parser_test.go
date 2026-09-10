@@ -370,3 +370,61 @@ func TestParseIncompleteChains(t *testing.T) {
 		})
 	}
 }
+
+// TestParseUnbalancedParentheses makes sure every opening parenthesis is
+// closed and every closing one was opened, while balanced nesting keeps
+// working at any depth.
+func TestParseUnbalancedParentheses(t *testing.T) {
+	for _, cond := range []string{
+		"(",
+		"(a",
+		"(a OR b",
+		"a AND (b",
+		"a AND ((b OR c)",
+		")",
+		"a)",
+		"a AND b)",
+		"a AND b) OR c",
+		"(a OR b))",
+		"a AND (b OR c))",
+	} {
+		t.Run(fmt.Sprintf("Condition: '%s'", cond), func(t *testing.T) {
+			_, err := ParseCondition(cond)
+			if err == nil {
+				t.Fatal("Want parsing error, got none")
+			}
+			if err.Reason != ParseErrUnbalancedParens {
+				t.Fatalf("Want reason '%s', got '%s'", ParseErrUnbalancedParens, err.Reason)
+			}
+		})
+	}
+
+	for _, tCase := range []struct {
+		cond string
+		vars map[string]bool
+		want bool
+	}{
+		{cond: "((a))", vars: map[string]bool{"a": true}, want: true},
+		{cond: "((a))", vars: map[string]bool{"a": false}, want: false},
+		{cond: "(a AND (b OR (c AND NOT d)))", vars: map[string]bool{"a": true, "b": false, "c": true, "d": false}, want: true},
+		{cond: "(a AND (b OR (c AND NOT d)))", vars: map[string]bool{"a": true, "b": false, "c": true, "d": true}, want: false},
+		{cond: "((a OR b) AND c) OR d", vars: map[string]bool{"a": false, "b": true, "c": true, "d": false}, want: true},
+		{cond: "((a OR b) AND c) OR d", vars: map[string]bool{"a": false, "b": true, "c": false, "d": false}, want: false},
+		{cond: "((a OR b) AND c) OR d", vars: map[string]bool{"a": false, "b": false, "c": false, "d": true}, want: true},
+	} {
+		t.Run(fmt.Sprintf("Balanced '%s' with %v", tCase.cond, tCase.vars), func(t *testing.T) {
+			cond, err := ParseCondition(tCase.cond)
+			if err != nil {
+				t.Fatalf("Want no error, got %s", err)
+			}
+
+			got, applyErr := cond(tCase.vars)
+			if applyErr != nil {
+				t.Fatalf("Want no error, got %s", applyErr)
+			}
+			if got != tCase.want {
+				t.Errorf("Want %t, got %t", tCase.want, got)
+			}
+		})
+	}
+}

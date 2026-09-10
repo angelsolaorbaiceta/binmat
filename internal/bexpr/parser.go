@@ -89,7 +89,7 @@ func (p *parser) next() string {
 // If the expression can't be parsed, an ErrConditionParse error is returned.
 func ParseCondition(condition string) (Condition, *ErrConditionParse) {
 	p := parserFromCond(condition)
-	expr, err := parse(p)
+	expr, err := parse(p, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -105,11 +105,18 @@ func ParseCondition(condition string) (Condition, *ErrConditionParse) {
 	return cond, nil
 }
 
-func parse(p *parser) (conditionExpr, *ErrConditionParse) {
+// parse consumes tokens until they run out or, when parsing the contents of a
+// group (depth > 0), until the parenthesis closing it. The depth is the number
+// of parentheses open at this point, which is what tells a closing parenthesis
+// that was never opened from one that ends the current group.
+func parse(p *parser, depth int) (conditionExpr, *ErrConditionParse) {
 	var (
 		token string
 		expr  conditionExpr
 		err   *errAppendToCond
+		// closed records whether the loop ended at the parenthesis closing the
+		// current group, as opposed to running out of tokens.
+		closed bool
 	)
 
 outerLoop:
@@ -119,7 +126,7 @@ outerLoop:
 			continue
 
 		case tokenGroupStart:
-			groupExpr, parseErr := parse(p)
+			groupExpr, parseErr := parse(p, depth+1)
 			if parseErr != nil {
 				return nil, parseErr
 			}
@@ -131,7 +138,16 @@ outerLoop:
 			}
 
 		case tokenGroupEnd:
+			if depth == 0 {
+				return nil, &ErrConditionParse{
+					OffendingCond: p.cond,
+					Reason:        ParseErrUnbalancedParens,
+					Details:       "unexpected ')'",
+				}
+			}
+
 			// The current group is considered complete, so it can be returned from here
+			closed = true
 			break outerLoop
 
 		case tokenNot:
@@ -170,6 +186,14 @@ outerLoop:
 					),
 				}
 			}
+		}
+	}
+
+	if depth > 0 && !closed {
+		return nil, &ErrConditionParse{
+			OffendingCond: p.cond,
+			Reason:        ParseErrUnbalancedParens,
+			Details:       "missing ')'",
 		}
 	}
 
