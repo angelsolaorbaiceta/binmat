@@ -10,7 +10,7 @@ import (
 )
 
 func TestSignatureYAML(t *testing.T) {
-	fileBytes, err := os.ReadFile("../../examples/signatures/__io_test.yaml")
+	fileBytes, err := os.ReadFile("io/io_test.yaml")
 	if err != nil {
 		panic("Can't read file" + err.Error())
 	}
