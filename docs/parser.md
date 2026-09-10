@@ -75,7 +75,9 @@ variable  = /[a-z0-9_]{1,16}/
 ```
 
 Whitespace between tokens is ignored, so `a AND(b OR c)` and `  a   AND ( b OR c )  `
-are the same condition.
+are the same condition. Variables and keywords do have to be separated from
+each other by whitespace or a parenthesis, though: `a ANDb` is an error, not a
+spelling of `a AND b`.
 
 ## Where the parser sits
 
@@ -163,6 +165,19 @@ ANDY         → unexpected character ('Y' at column 4)
 
 Without this check `Foo AND bar` would tokenize to `["oo" "AND" "bar"]` and
 parse as a different, valid condition.
+
+A second check covers the opposite problem: two matches with *nothing* between
+them. The regular expression happily splits `ANDb` into `AND` and `b`, so the
+tokenizer rejects consecutive word tokens, variables or keywords, that touch.
+Parentheses are exempt, since `(a OR b)` is the normal way to write a group.
+The whole glued run is reported as one word, so the message shows what was
+actually typed:
+
+```
+a ANDb       → missing whitespace between tokens ('ANDb' at column 3)
+aAND b       → missing whitespace between tokens ('aAND' at column 1)
+NOTNOT a     → missing whitespace between tokens ('NOTNOT' at column 1)
+```
 
 Variable length is not enforced here. The regex accepts runs of any length; the
 parser checks each variable token against `IsValidVarName` and reports
@@ -447,6 +462,7 @@ variable, and after the load-time check that can't happen either, so
 | Reason | Constant | Raised when | Detail | Example |
 |---|---|---|---|---|
 | unexpected character | `ParseErrUnexpectedChar` | the text between two tokens contains something other than whitespace | the character and its 1-based column | `a & b`, `Foo AND bar` |
+| missing whitespace between tokens | `ParseErrMissingWhitespace` | two variables or keywords follow each other with nothing in between | the glued run and its 1-based column | `a ANDb`, `NOTNOT a` |
 | invalid variable name | `ParseErrInvalidVarName` | a variable token fails `IsValidVarName` (in practice, it's longer than 16 characters) | the offending name and the rule | `a_very_long_variable_name AND b` |
 | invalid append attempt | `ParseErrInvalidAppend` | a token can't follow what came before it | the expression it couldn't be appended to | `a b`, `a NOT b`, `a AND AND b`, `(a OR b) c` |
 | incomplete binary operation | `ParseErrIncompleteExpr` | an operand is missing once the tokens run out | the rendered tree, with `??` for the hole | `a AND`, `OR b`, `a AND ()` |
@@ -463,10 +479,11 @@ Evaluation has a single error, `ErrMissingVarValue`, described above.
 - **Keywords are case-sensitive.** `a and b` treats `and` as a variable name
   and fails with an invalid append. Only uppercase `AND`, `OR` and `NOT` are
   operators.
-- **Tokens don't need separating whitespace.** The tokenizer only checks the
-  text between matches, so `a ANDb` and `aAND b` both tokenize to
-  `["a" "AND" "b"]` and parse as `a AND b`. Uppercase runs that aren't exactly
-  a keyword do fail, since the leftover letters are unexpected characters.
+- **Uppercase typos read as unexpected characters.** Only the three keywords
+  contain uppercase letters, so `ANDB` reports an unexpected `B` at column 4
+  while `ANDb` reports missing whitespace. Both are errors; the wording differs
+  because the regular expression never produces a token for stray uppercase
+  letters.
 - **No short-circuit evaluation.** Cheap by design here, since evaluation is a
   handful of map lookups per file, but worth knowing if the tree ever grows
   expensive leaves.
@@ -479,7 +496,7 @@ Evaluation has a single error, `ErrMissingVarValue`, described above.
 The package is tested at three levels, all in `internal/bexpr`:
 
 - `tokenizer_test.go` checks the token stream for a few inputs, and that
-  unexpected characters are reported with the right column.
+  unexpected characters and glued tokens are reported with the right column.
 - `cond_and_test.go`, `cond_or_test.go`, `cond_not_test.go` and
   `cond_group_test.go` exercise each node type in isolation: operand setters,
   `String()` rendering with `??`, and the rules on what can be set as an
@@ -489,8 +506,9 @@ The package is tested at three levels, all in `internal/bexpr`:
   covers chained operators and precedence with explicit truth tables.
   `TestParseIncompleteChains` covers malformed chains,
   `TestParseUnbalancedParentheses` covers parenthesis balance in both
-  directions plus deep nesting, and `TestParseUnexpectedCharacters` checks
-  that tokenizer errors surface through `ParseCondition`.
+  directions plus deep nesting, and `TestParseUnexpectedCharacters` and
+  `TestParseMissingWhitespace` check that tokenizer errors surface through
+  `ParseCondition`.
 
 The truth-table style is the recommended way to add coverage for a new shape:
 list the condition, then every combination of variable values that matters and

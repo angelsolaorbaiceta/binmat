@@ -449,3 +449,23 @@ func TestParseUnexpectedCharacters(t *testing.T) {
 		})
 	}
 }
+
+// TestParseMissingWhitespace makes sure glued tokens are rejected by
+// ParseCondition instead of being read as separate ones.
+func TestParseMissingWhitespace(t *testing.T) {
+	for _, cond := range []string{
+		"a ANDb",
+		"aAND b",
+		"NOTNOT a",
+	} {
+		t.Run(fmt.Sprintf("Condition: '%s'", cond), func(t *testing.T) {
+			_, err := ParseCondition(cond)
+			if err == nil {
+				t.Fatal("Want parsing error, got none")
+			}
+			if err.Reason != ParseErrMissingWhitespace {
+				t.Fatalf("Want reason '%s', got '%s'", ParseErrMissingWhitespace, err.Reason)
+			}
+		})
+	}
+}

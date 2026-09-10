@@ -16,11 +16,12 @@ func (e ErrMissingVarValue) Error() string {
 type ParseErrorReason string
 
 const (
-	ParseErrInvalidAppend    ParseErrorReason = "invalid append attempt"
-	ParseErrInvalidVarName   ParseErrorReason = "invalid variable name"
-	ParseErrIncompleteExpr   ParseErrorReason = "incomplete binary operation"
-	ParseErrUnbalancedParens ParseErrorReason = "unbalanced parentheses"
-	ParseErrUnexpectedChar   ParseErrorReason = "unexpected character"
+	ParseErrInvalidAppend     ParseErrorReason = "invalid append attempt"
+	ParseErrInvalidVarName    ParseErrorReason = "invalid variable name"
+	ParseErrIncompleteExpr    ParseErrorReason = "incomplete binary operation"
+	ParseErrUnbalancedParens  ParseErrorReason = "unbalanced parentheses"
+	ParseErrUnexpectedChar    ParseErrorReason = "unexpected character"
+	ParseErrMissingWhitespace ParseErrorReason = "missing whitespace between tokens"
 )
 
 // ErrConditionParse is returned when a condition expression can't be parsed due
