@@ -20,23 +20,36 @@ func (c *andCondition) apply(vars map[string]bool) (bool, *ErrMissingVarValue) {
 	return a && b, nil
 }
 
+func (c *andCondition) precedence() int {
+	return precedenceAnd
+}
+
 func (c *andCondition) hasRhs() bool {
 	return c.rhs != nil
 }
 
+// setRhs sets the expression as the rhs operand or, if there is one already,
+// appends the expression to it. Only variables and unary expressions can be
+// set as the operand; binary operators are chained through appendToCondition.
 func (c *andCondition) setRhs(expr conditionExpr) *errAppendToCond {
-	if !canAppend(c, expr) {
-		return &errAppendToCond{c, expr}
-	}
-
 	if c.rhs == nil {
+		if !isOperand(expr) {
+			return &errAppendToCond{c, expr}
+		}
+
 		c.rhs = expr
 		return nil
 	}
 
-	_, err := appendToCondition(c.rhs, expr)
+	// Appending might restructure the rhs subtree (e.g. "?? OR a" + "AND" yields
+	// "?? OR (a AND ??)"), so the returned parent replaces the current rhs.
+	rhs, err := appendToCondition(c.rhs, expr)
+	if err != nil {
+		return err
+	}
 
-	return err
+	c.rhs = rhs
+	return nil
 }
 
 func (c *andCondition) getRhs() conditionExpr {

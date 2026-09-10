@@ -15,11 +15,12 @@ func (c *groupCondition) hasOp() bool {
 }
 
 // setOp sets either a variable or another unary expression as the operand
-// for this unary expression.
+// for this unary expression or, if there is one already, appends the
+// expression to it.
 // Binary expressions can't be added as operands, so an errAppendToCond is
 // returned in this case.
 func (c *groupCondition) setOp(expr conditionExpr) *errAppendToCond {
-	if !canAppend(c, expr) {
+	if !isOperand(expr) {
 		return &errAppendToCond{c, expr}
 	}
 
@@ -28,9 +29,13 @@ func (c *groupCondition) setOp(expr conditionExpr) *errAppendToCond {
 		return nil
 	}
 
-	_, err := appendToCondition(c.expr, expr)
+	inner, err := appendToCondition(c.expr, expr)
+	if err != nil {
+		return err
+	}
 
-	return err
+	c.expr = inner
+	return nil
 }
 
 func (c *groupCondition) getOp() conditionExpr {

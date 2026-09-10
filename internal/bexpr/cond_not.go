@@ -22,11 +22,12 @@ func (c *notCondition) hasOp() bool {
 }
 
 // setOp sets either a variable or another unary expression as the operand
-// for this unary expression.
+// for this unary expression or, if there is one already, appends the
+// expression to it.
 // Binary expressions can't be added as operands, so an errAppendToCond is
 // returned in this case.
 func (c *notCondition) setOp(expr conditionExpr) *errAppendToCond {
-	if !canAppend(c, expr) {
+	if !isOperand(expr) {
 		return &errAppendToCond{c, expr}
 	}
 
@@ -35,9 +36,13 @@ func (c *notCondition) setOp(expr conditionExpr) *errAppendToCond {
 		return nil
 	}
 
-	_, err := appendToCondition(c.op, expr)
+	op, err := appendToCondition(c.op, expr)
+	if err != nil {
+		return err
+	}
 
-	return err
+	c.op = op
+	return nil
 }
 
 func (c *notCondition) getOp() conditionExpr {

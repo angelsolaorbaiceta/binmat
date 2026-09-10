@@ -196,3 +196,177 @@ func TestParseCondition(t *testing.T) {
 		})
 	}
 }
+
+// TestParseChainedConditions covers expressions where a group, a NOT or a
+// completed binary operation is followed by another binary operator, and the
+// precedence rules that apply when AND and OR are mixed without parentheses:
+// NOT binds tightest, then AND, then OR, and equal operators associate left.
+func TestParseChainedConditions(t *testing.T) {
+	type truthCase struct {
+		vars map[string]bool
+		want bool
+	}
+
+	for _, tCase := range []struct {
+		cond  string
+		cases []truthCase
+	}{
+		{
+			cond: "(a OR b) AND c",
+			cases: []truthCase{
+				{vars: map[string]bool{"a": false, "b": false, "c": false}, want: false},
+				{vars: map[string]bool{"a": false, "b": false, "c": true}, want: false},
+				{vars: map[string]bool{"a": false, "b": true, "c": false}, want: false},
+				{vars: map[string]bool{"a": false, "b": true, "c": true}, want: true},
+				{vars: map[string]bool{"a": true, "b": false, "c": false}, want: false},
+				{vars: map[string]bool{"a": true, "b": false, "c": true}, want: true},
+				{vars: map[string]bool{"a": true, "b": true, "c": false}, want: false},
+				{vars: map[string]bool{"a": true, "b": true, "c": true}, want: true},
+			},
+		},
+		{
+			cond: "(a OR b) AND (c OR d)",
+			cases: []truthCase{
+				{vars: map[string]bool{"a": true, "b": false, "c": false, "d": true}, want: true},
+				{vars: map[string]bool{"a": true, "b": false, "c": false, "d": false}, want: false},
+				{vars: map[string]bool{"a": false, "b": false, "c": true, "d": true}, want: false},
+				{vars: map[string]bool{"a": false, "b": true, "c": true, "d": false}, want: true},
+			},
+		},
+		{
+			cond: "a AND b AND c",
+			cases: []truthCase{
+				{vars: map[string]bool{"a": true, "b": true, "c": true}, want: true},
+				{vars: map[string]bool{"a": true, "b": true, "c": false}, want: false},
+				{vars: map[string]bool{"a": true, "b": false, "c": true}, want: false},
+				{vars: map[string]bool{"a": false, "b": true, "c": true}, want: false},
+			},
+		},
+		{
+			cond: "a OR b OR c",
+			cases: []truthCase{
+				{vars: map[string]bool{"a": false, "b": false, "c": false}, want: false},
+				{vars: map[string]bool{"a": false, "b": false, "c": true}, want: true},
+				{vars: map[string]bool{"a": true, "b": false, "c": false}, want: true},
+			},
+		},
+		{
+			cond: "a AND (b OR c) AND d",
+			cases: []truthCase{
+				{vars: map[string]bool{"a": true, "b": false, "c": true, "d": true}, want: true},
+				{vars: map[string]bool{"a": true, "b": false, "c": false, "d": true}, want: false},
+				{vars: map[string]bool{"a": true, "b": true, "c": true, "d": false}, want: false},
+				{vars: map[string]bool{"a": false, "b": true, "c": true, "d": true}, want: false},
+			},
+		},
+		{
+			cond: "NOT a AND b",
+			cases: []truthCase{
+				{vars: map[string]bool{"a": false, "b": false}, want: false},
+				{vars: map[string]bool{"a": false, "b": true}, want: true},
+				{vars: map[string]bool{"a": true, "b": false}, want: false},
+				{vars: map[string]bool{"a": true, "b": true}, want: false},
+			},
+		},
+		{
+			cond: "NOT a OR b",
+			cases: []truthCase{
+				{vars: map[string]bool{"a": true, "b": false}, want: false},
+				{vars: map[string]bool{"a": true, "b": true}, want: true},
+				{vars: map[string]bool{"a": false, "b": false}, want: true},
+			},
+		},
+		{
+			cond: "NOT (a OR b) AND c",
+			cases: []truthCase{
+				{vars: map[string]bool{"a": false, "b": false, "c": true}, want: true},
+				{vars: map[string]bool{"a": false, "b": false, "c": false}, want: false},
+				{vars: map[string]bool{"a": true, "b": false, "c": true}, want: false},
+				{vars: map[string]bool{"a": false, "b": true, "c": true}, want: false},
+			},
+		},
+		{
+			// AND binds tighter than OR: a OR (b AND c)
+			cond: "a OR b AND c",
+			cases: []truthCase{
+				{vars: map[string]bool{"a": false, "b": false, "c": false}, want: false},
+				{vars: map[string]bool{"a": false, "b": false, "c": true}, want: false},
+				{vars: map[string]bool{"a": false, "b": true, "c": false}, want: false},
+				{vars: map[string]bool{"a": false, "b": true, "c": true}, want: true},
+				{vars: map[string]bool{"a": true, "b": false, "c": false}, want: true},
+				{vars: map[string]bool{"a": true, "b": false, "c": true}, want: true},
+				{vars: map[string]bool{"a": true, "b": true, "c": false}, want: true},
+				{vars: map[string]bool{"a": true, "b": true, "c": true}, want: true},
+			},
+		},
+		{
+			// AND binds tighter than OR: (a AND b) OR c
+			cond: "a AND b OR c",
+			cases: []truthCase{
+				{vars: map[string]bool{"a": false, "b": false, "c": false}, want: false},
+				{vars: map[string]bool{"a": false, "b": false, "c": true}, want: true},
+				{vars: map[string]bool{"a": false, "b": true, "c": false}, want: false},
+				{vars: map[string]bool{"a": false, "b": true, "c": true}, want: true},
+				{vars: map[string]bool{"a": true, "b": false, "c": false}, want: false},
+				{vars: map[string]bool{"a": true, "b": false, "c": true}, want: true},
+				{vars: map[string]bool{"a": true, "b": true, "c": false}, want: true},
+				{vars: map[string]bool{"a": true, "b": true, "c": true}, want: true},
+			},
+		},
+		{
+			// NOT binds tighter than AND, which binds tighter than OR: a OR ((NOT b) AND c)
+			cond: "a OR NOT b AND c",
+			cases: []truthCase{
+				{vars: map[string]bool{"a": false, "b": false, "c": true}, want: true},
+				{vars: map[string]bool{"a": false, "b": true, "c": true}, want: false},
+				{vars: map[string]bool{"a": false, "b": false, "c": false}, want: false},
+				{vars: map[string]bool{"a": true, "b": true, "c": false}, want: true},
+			},
+		},
+	} {
+		t.Run(fmt.Sprintf("Condition: '%s'", tCase.cond), func(t *testing.T) {
+			cond, err := ParseCondition(tCase.cond)
+			if err != nil {
+				t.Fatalf("Want no error, got %s", err)
+			}
+
+			for _, c := range tCase.cases {
+				got, applyErr := cond(c.vars)
+				if applyErr != nil {
+					t.Fatalf("With %v, want no error, got %s", c.vars, applyErr)
+				}
+				if got != c.want {
+					t.Errorf("With %v, want %t but got %t", c.vars, c.want, got)
+				}
+			}
+		})
+	}
+}
+
+// TestParseIncompleteChains makes sure malformed chains are rejected instead
+// of yielding a condition that would fail when applied.
+func TestParseIncompleteChains(t *testing.T) {
+	for _, tCase := range []struct {
+		cond   string
+		reason ParseErrorReason
+	}{
+		{cond: "a AND AND b", reason: ParseErrInvalidAppend},
+		{cond: "a OR AND b", reason: ParseErrInvalidAppend},
+		{cond: "NOT AND b", reason: ParseErrInvalidAppend},
+		{cond: "(a OR b) c", reason: ParseErrInvalidAppend},
+		{cond: "a AND NOT NOT", reason: ParseErrIncompleteExpr},
+		{cond: "a AND ()", reason: ParseErrIncompleteExpr},
+		{cond: "a AND (b OR)", reason: ParseErrIncompleteExpr},
+		{cond: "(a OR b) AND", reason: ParseErrIncompleteExpr},
+	} {
+		t.Run(fmt.Sprintf("Condition: '%s'", tCase.cond), func(t *testing.T) {
+			_, err := ParseCondition(tCase.cond)
+			if err == nil {
+				t.Fatal("Want parsing error, got none")
+			}
+			if err.Reason != tCase.reason {
+				t.Fatalf("Want reason '%s', got '%s'", tCase.reason, err.Reason)
+			}
+		})
+	}
+}

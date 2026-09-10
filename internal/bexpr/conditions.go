@@ -29,10 +29,21 @@ type varConditionExpr interface {
 	getName() string
 }
 
+// Binary operator precedences: the higher, the tighter the operator binds its
+// operands when no parentheses are used.
+const (
+	precedenceOr  = 1
+	precedenceAnd = 2
+)
+
 // A binaryConditionExpr is a boolean expression that operates on two booleans,
 // the lhs (left hand side) and rhs (right hand side).
 type binaryConditionExpr interface {
 	conditionExpr
+
+	// precedence returns how tightly the operator binds its operands relative
+	// to other binary operators (see the precedence constants).
+	precedence() int
 
 	hasRhs() bool
 	setRhs(expr conditionExpr) *errAppendToCond
@@ -54,7 +65,7 @@ type unaryConditionExpr interface {
 }
 
 // isCondComplete returns whether the passed in condition has its operands
-// defined (if should have them).
+// defined (if it should have them), all the way down the expression tree.
 func isCondComplete(cond conditionExpr) bool {
 	// A nil condition is considered "complete" (there isn't anything missing)
 	if cond == nil {
@@ -67,12 +78,13 @@ func isCondComplete(cond conditionExpr) bool {
 		return true
 
 	case unaryConditionExpr:
-		// A unary condition is complete if it has an operand
-		return typedCond.hasOp()
+		// A unary condition is complete if it has a complete operand
+		return typedCond.hasOp() && isCondComplete(typedCond.getOp())
 
 	case binaryConditionExpr:
-		// A binary condition if it has lhs and rhs
-		return typedCond.hasLhs() && typedCond.hasRhs()
+		// A binary condition is complete if it has complete lhs and rhs
+		return typedCond.hasLhs() && typedCond.hasRhs() &&
+			isCondComplete(typedCond.getLhs()) && isCondComplete(typedCond.getRhs())
 	}
 
 	panic("Forgot to handle a condition type?")

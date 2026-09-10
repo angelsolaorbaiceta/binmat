@@ -71,11 +71,19 @@ func (p *parser) next() string {
 //   - NOT
 //   - Parentheses (for grouping)
 //
+// NOT binds tighter than AND, which binds tighter than OR, so "a OR b AND c"
+// reads as "a OR (b AND c)" and "NOT a AND b" as "(NOT a) AND b". Operators of
+// the same precedence associate to the left: "a AND b AND c" reads as
+// "(a AND b) AND c". Parentheses override this order.
+//
 // Examples of valid conditions:
 //   - "a AND b"
 //   - "a OR b"
+//   - "a AND b AND c"
 //   - "a AND (b OR c)"
+//   - "(a OR b) AND c"
 //   - "a AND NOT b"
+//   - "NOT a AND b"
 //   - "a AND NOT (b OR c)"
 //
 // If the expression can't be parsed, an ErrConditionParse error is returned.
